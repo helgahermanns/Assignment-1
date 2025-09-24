@@ -8,7 +8,7 @@ gurobipy>=11.0.0
 numpy>=1.26
 pandas>=2.1
 #json
-csv
+#csv
 
 # Plotting
 matplotlib>=3.8
