@@ -92,7 +92,7 @@ def print_professional_results(results, optimization_data):
 
 
 def create_professional_plot(results, optimization_data):
-    """Create clean, professional visualization."""
+    """Create clean, professional visualization with proper step plots."""
     
     # Set professional style
     plt.style.use('default')
@@ -109,34 +109,56 @@ def create_professional_plot(results, optimization_data):
     fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(14, 10))
     fig.suptitle('Q1 Part IV: Consumer Energy Flexibility Analysis', fontsize=14, fontweight='bold')
     
-    # 1. Load Schedule and PV
-    ax1.plot(hours, results['load_schedule'], 'b-', linewidth=2, label='Load Schedule')
-    ax1.plot(hours, optimization_data['pv_max_hourly'], 'y-', linewidth=2, label='PV Available', alpha=0.7)
-    ax1.plot(hours, results['pv_schedule'], 'orange', linewidth=2, label='PV Used')
+    # 1. Load Schedule and PV with Price on right axis
+    ax1.step(hours, results['load_schedule'], 'b-', linewidth=2, label='Load Schedule', where='mid')
+    ax1.step(hours, results['pv_schedule'], 'orange', linewidth=2, label='PV Used', where='mid')
     ax1.set_xlabel('Hour')
-    ax1.set_ylabel('Power (kW)')
+    ax1.set_ylabel('Power (kW)', color='black')
     ax1.set_title('Load Schedule and PV Utilization')
-    ax1.legend()
-    ax1.set_xlim(1, 24)
+    ax1.set_xlim(0.5, 24.5)
+    ax1.grid(True, alpha=0.3)
     
-    # 2. Grid Interactions
-    ax2.bar(hours, results['import_schedule'], color='red', alpha=0.7, label='Import')
-    ax2.bar(hours, [-x for x in results['export_schedule']], color='green', alpha=0.7, label='Export')
+    # Add price on right y-axis
+    ax1_price = ax1.twinx()
+    ax1_price.step(hours, optimization_data['energy_prices'], 'k--', linewidth=1.5, alpha=0.7, label='Energy Price', where='mid')
+    ax1_price.set_ylabel('Price (DKK/kWh)', color='black')
+    ax1_price.tick_params(axis='y', labelcolor='black')
+    
+    # Combined legend
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax1_price.get_legend_handles_labels()
+    ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
+    
+    # 2. Grid Interactions with Price on right axis
+    ax2.bar(hours, results['import_schedule'], color='red', alpha=0.7, label='Import', width=0.8)
+    ax2.bar(hours, [-x for x in results['export_schedule']], color='green', alpha=0.7, label='Export', width=0.8)
     ax2.axhline(y=0, color='black', linestyle='-', alpha=0.5)
     ax2.set_xlabel('Hour')
-    ax2.set_ylabel('Power (kW)')
+    ax2.set_ylabel('Power (kW)', color='black')
     ax2.set_title('Grid Import/Export')
-    ax2.legend()
     ax2.set_xlim(0.5, 24.5)
+    ax2.grid(True, alpha=0.3)
     
-    # 3. Energy Prices
-    ax3.plot(hours, optimization_data['energy_prices'], 'k-', linewidth=2, marker='o', markersize=4)
+    # Add price on right y-axis
+    ax2_price = ax2.twinx()
+    ax2_price.step(hours, optimization_data['energy_prices'], 'k--', linewidth=1.5, alpha=0.7, label='Energy Price', where='mid')
+    ax2_price.set_ylabel('Price (DKK/kWh)', color='black')
+    ax2_price.tick_params(axis='y', labelcolor='black')
+    
+    # Combined legend
+    lines3, labels3 = ax2.get_legend_handles_labels()
+    lines4, labels4 = ax2_price.get_legend_handles_labels()
+    ax2.legend(lines3 + lines4, labels3 + labels4, loc='upper left')
+    
+    # 3. Energy Prices - USE STEP PLOT
+    ax3.step(hours, optimization_data['energy_prices'], 'k-', linewidth=2, where='mid', marker='o', markersize=4)
     ax3.set_xlabel('Hour')
     ax3.set_ylabel('Price (DKK/kWh)')
     ax3.set_title('Hourly Energy Prices')
-    ax3.set_xlim(1, 24)
+    ax3.set_xlim(0.5, 24.5)
+    ax3.grid(True, alpha=0.3)
     
-    # 4. Summary Statistics
+    # 4. Summary Statistics (unchanged)
     ax4.axis('off')
     
     # Calculate summary stats
@@ -177,7 +199,6 @@ during high-price periods.
     # Save professional version
     plt.savefig('Q1iv_Results.png', dpi=300, bbox_inches='tight')
     print(f"\nVisualization saved as 'Q1iv_Results.png'")
-
 
 if __name__ == "__main__":
     results = solve_q1iv_professional()
