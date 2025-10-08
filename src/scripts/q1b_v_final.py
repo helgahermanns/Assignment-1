@@ -6,7 +6,14 @@ PART 1: 4 W-Variation Scenarios (w = 0.5, 1.5, 2.5, 5.0)
 - Plot 1: Load profiles comparison with energy prices
 - Plot 2: Cost breakdown (energy cost, energy revenue, discomfort cost)
 - Plot 3: Daily energy balance summary (import, export, consumption, PV used)
-- Plot 4: Consumer under-consumption patterns
+- Plot 4: Consumer under-c    # Create 4 individual consumer plots
+    for i, consumer in enumerate(consumer_results):
+        print(f"📊 Creating Consumer Plot {i+1}: {consumer['name']}...")
+        create_individual_consumer_plot(consumer, i+1, system_params)
+    
+    # Create combined cost breakdown
+    print("📊 Creating Consumer Cost Breakdown...")
+    create_consumer_cost_breakdown(consumer_results, system_params)on patterns
 
 PART 2: 4 Consumer Load Profile Scenarios (at w = 1.5)
 - 4 individual plots: Tech Enthusiast, Work from Home, Traditional Family, Senior Fixed
@@ -27,6 +34,64 @@ sys.path.append(str(Path(__file__).parent.parent))
 from data_ops.data_loader import DataLoader
 from data_ops.data_processor import DataProcessor
 from opt_model.opt_model_Q1b import ConsumerFlexibilityModelQ1b
+
+def load_system_parameters():
+    """Load energy prices and system parameters from data files"""
+    project_root = Path(__file__).parent.parent.parent
+    loader = DataLoader(base_path=str(project_root / "data"))
+    
+    # Load base data to get energy prices
+    base_data = loader.load_data("question_1b")
+    
+    # Extract energy prices from bus_params
+    energy_prices = base_data['bus_params'][0]['energy_price_DKK_per_kWh']
+    import_tariff = base_data['bus_params'][0]['import_tariff_DKK/kWh']
+    export_tariff = base_data['bus_params'][0]['export_tariff_DKK/kWh']
+    
+    print(f"✅ Loaded energy prices: {len(energy_prices)} hourly values")
+    print(f"✅ Import tariff: {import_tariff} DKK/kWh")
+    print(f"✅ Export tariff: {export_tariff} DKK/kWh")
+    
+    return {
+        'energy_prices': energy_prices,
+        'import_tariff': import_tariff,
+        'export_tariff': export_tariff
+    }
+
+def get_consumer_configurations():
+    """Define consumer load profiles based on realistic usage patterns"""
+    consumer_configs = [
+        {
+            'name': 'Tech Enthusiast',
+            'description': 'Late evening peak (19-22h), moderate flexibility',
+            'load_multipliers': [0.5, 0.4, 0.3, 0.3, 0.3, 0.4, 0.6, 0.8, 1.2, 1.4, 1.3, 1.2, 
+                               1.1, 1.0, 1.1, 1.3, 1.5, 1.8, 2.2, 2.5, 2.3, 1.8, 1.2, 0.8]
+        },
+        {
+            'name': 'Work from Home',
+            'description': 'Flat daytime consumption, high flexibility',
+            'load_multipliers': [0.6, 0.5, 0.4, 0.4, 0.5, 0.7, 1.0, 1.2, 1.4, 1.3, 1.2, 1.1, 
+                               1.0, 1.1, 1.2, 1.3, 1.4, 1.3, 1.2, 1.1, 1.0, 0.9, 0.8, 0.7]
+        },
+        {
+            'name': 'Traditional Family',
+            'description': 'Dual peaks (morning/evening), medium flexibility',
+            'load_multipliers': [0.4, 0.3, 0.3, 0.3, 0.4, 0.8, 1.5, 2.0, 1.8, 1.2, 1.0, 0.9, 
+                               0.8, 0.9, 1.0, 1.2, 1.4, 1.8, 2.2, 2.0, 1.6, 1.2, 0.8, 0.6]
+        },
+        {
+            'name': 'Senior Fixed Schedule',
+            'description': 'Fixed routine, minimal flexibility',
+            'load_multipliers': [0.5, 0.4, 0.4, 0.4, 0.5, 0.8, 1.2, 1.5, 1.3, 1.1, 1.0, 1.0, 
+                               1.1, 1.2, 1.1, 1.0, 0.9, 1.0, 1.2, 1.4, 1.2, 1.0, 0.8, 0.6]
+        }
+    ]
+    
+    print(f"✅ Loaded {len(consumer_configs)} consumer configurations")
+    for config in consumer_configs:
+        print(f"   - {config['name']}: {config['description']}")
+    
+    return consumer_configs
 
 def solve_w_variation_scenarios():
     """Solve the 4 w-variation scenarios: 0.5, 1.5, 2.5, 5.0"""
@@ -78,33 +143,32 @@ def solve_w_variation_scenarios():
     
     return scenario_results
 
-def create_w_variation_plots(scenario_results):
+def create_w_variation_plots(scenario_results, system_params):
     """Create the 4 plots for w-variation analysis"""
     
     # Plot 1: Load profiles comparison with energy prices
     print("📊 Creating Plot 1: Load Profiles with Energy Prices...")
-    create_load_profiles_comparison(scenario_results)
+    create_load_profiles_comparison(scenario_results, system_params)
     
     # Plot 2: Cost breakdown
     print("📊 Creating Plot 2: Cost Breakdown...")
-    create_cost_breakdown_analysis(scenario_results)
+    create_cost_breakdown_analysis(scenario_results, system_params)
     
     # Plot 3: Daily energy balance summary
     print("📊 Creating Plot 3: Daily Energy Balance Summary...")
-    create_energy_balance_summary(scenario_results)
+    create_energy_balance_summary(scenario_results, system_params)
     
     # Plot 4: Consumer under-consumption patterns
     print("📊 Creating Plot 4: Under-Consumption Patterns...")
-    create_under_consumption_patterns(scenario_results)
+    create_under_consumption_patterns(scenario_results, system_params)
 
-def create_load_profiles_comparison(scenario_results):
+def create_load_profiles_comparison(scenario_results, system_params):
     """Plot 1: Load profiles for all 4 scenarios with energy prices"""
     fig, ax1 = plt.subplots(figsize=(16, 10))
     
     hours = np.arange(1, 25)
-    # Actual energy prices from bus_params.json
-    energy_prices = [1.1, 1.05, 1.0, 0.9, 0.85, 1.01, 1.05, 1.2, 1.4, 1.6, 1.5, 1.1, 
-                    1.05, 1.0, 0.95, 1.0, 1.2, 1.5, 2.1, 2.5, 2.2, 1.8, 1.4, 1.2]
+    # Load energy prices from system parameters
+    energy_prices = system_params['energy_prices']
     
     # Plot reference load as black dotted line
     if scenario_results:
@@ -117,7 +181,7 @@ def create_load_profiles_comparison(scenario_results):
     for i, scenario in enumerate(scenario_results):
         results = scenario['results']
         ax1.step(hours, results['load_schedule'], where='mid', color=colors[i], linewidth=2.5, 
-                label=f'Actual Load (w={scenario["weight"]})', alpha=0.9)
+                label=f'Load (w={scenario["weight"]})', alpha=0.9)
     
     # Secondary y-axis for energy prices
     ax2 = ax1.twinx()
@@ -144,11 +208,14 @@ def create_load_profiles_comparison(scenario_results):
     plt.savefig('Q1b_v_Load_Profiles_Comparison.png', dpi=300, bbox_inches='tight')
     plt.show()
 
-def create_cost_breakdown_analysis(scenario_results):
+def create_cost_breakdown_analysis(scenario_results, system_params):
     """Plot 2: Cost breakdown with energy cost, revenue, and discomfort"""
     fig, ax = plt.subplots(figsize=(14, 8))
     
     scenarios = [s['name'] for s in scenario_results]
+    energy_prices = system_params['energy_prices']
+    import_tariff = system_params['import_tariff']
+    export_tariff = system_params['export_tariff']
     
     # Calculate cost components
     energy_costs = []
@@ -158,19 +225,15 @@ def create_cost_breakdown_analysis(scenario_results):
     for scenario in scenario_results:
         results = scenario['results']
         
-        # Use actual energy prices from bus_params.json
-        energy_prices = [1.1, 1.05, 1.0, 0.9, 0.85, 1.01, 1.05, 1.2, 1.4, 1.6, 1.5, 1.1, 
-                        1.05, 1.0, 0.95, 1.0, 1.2, 1.5, 2.1, 2.5, 2.2, 1.8, 1.4, 1.2]
-        
         # Energy cost (imports)
         energy_cost = sum(
-            (energy_prices[t] + 0.5) * imp  # energy_price + import_tariff
+            (energy_prices[t] + import_tariff) * imp
             for t, imp in enumerate(results['import_schedule'])
         )
         
         # Energy revenue (exports)
         energy_revenue = sum(
-            (energy_prices[t] - 0.4) * exp  # energy_price - export_tariff
+            (energy_prices[t] - export_tariff) * exp
             for t, exp in enumerate(results['export_schedule'])
         )
         
@@ -205,7 +268,7 @@ def create_cost_breakdown_analysis(scenario_results):
     plt.savefig('Q1b_v_Cost_Breakdown_Analysis.png', dpi=300, bbox_inches='tight')
     plt.show()
 
-def create_energy_balance_summary(scenario_results):
+def create_energy_balance_summary(scenario_results, system_params):
     """Plot 3: Daily energy balance with import, export, consumption, and PV used"""
     fig, ax = plt.subplots(figsize=(14, 8))
     
@@ -245,7 +308,7 @@ def create_energy_balance_summary(scenario_results):
     plt.savefig('Q1b_v_Energy_Balance_Summary.png', dpi=300, bbox_inches='tight')
     plt.show()
 
-def create_under_consumption_patterns(scenario_results):
+def create_under_consumption_patterns(scenario_results, system_params):
     """Plot 4: Consumer under-consumption patterns - single plot with different colors"""
     fig, ax = plt.subplots(figsize=(16, 8))
     
@@ -285,29 +348,8 @@ def solve_consumer_load_scenarios():
     scenario_results = []
     fixed_w = 1.5  # Fixed w value for consumer comparison
     
-    # Define consumer types with different load profiles
-    consumer_configs = [
-        {
-            'name': 'Tech Enthusiast',
-            'load_multipliers': [0.5, 0.4, 0.3, 0.3, 0.3, 0.4, 0.6, 0.8, 1.2, 1.4, 1.3, 1.2, 
-                               1.1, 1.0, 1.1, 1.3, 1.5, 1.8, 2.2, 2.5, 2.3, 1.8, 1.2, 0.8]
-        },
-        {
-            'name': 'Work from Home',
-            'load_multipliers': [0.6, 0.5, 0.4, 0.4, 0.5, 0.7, 1.0, 1.2, 1.4, 1.3, 1.2, 1.1, 
-                               1.0, 1.1, 1.2, 1.3, 1.4, 1.3, 1.2, 1.1, 1.0, 0.9, 0.8, 0.7]
-        },
-        {
-            'name': 'Traditional Family',
-            'load_multipliers': [0.4, 0.3, 0.3, 0.3, 0.4, 0.8, 1.5, 2.0, 1.8, 1.2, 1.0, 0.9, 
-                               0.8, 0.9, 1.0, 1.2, 1.4, 1.8, 2.2, 2.0, 1.6, 1.2, 0.8, 0.6]
-        },
-        {
-            'name': 'Senior Fixed Schedule',
-            'load_multipliers': [0.5, 0.4, 0.4, 0.4, 0.5, 0.8, 1.2, 1.5, 1.3, 1.1, 1.0, 1.0, 
-                               1.1, 1.2, 1.1, 1.0, 0.9, 1.0, 1.2, 1.4, 1.2, 1.0, 0.8, 0.6]
-        }
-    ]
+    # Load consumer configurations
+    consumer_configs = get_consumer_configurations()
     
     for consumer_config in consumer_configs:
         consumer_type = consumer_config['name']
@@ -347,38 +389,37 @@ def solve_consumer_load_scenarios():
                     'flexibility_pct': flexibility_pct
                 })
                 
-                print(f"✅ Solution found: Total Cost = {results['optimal_cost']:.2f} DKK")
+                print(f"   Solution found: Total Cost = {results['optimal_cost']:.2f} DKK")
                 print(f"   Energy Cost = {results['energy_cost']:.2f} DKK")
                 print(f"   Discomfort Cost = {results['discomfort_penalty']:.2f} DKK")
                 print(f"   Flexibility = {flexibility_pct:.1f}%")
             else:
-                print(f"❌ No solution found for {consumer_type}")
+                print(f"No solution found for {consumer_type}")
                 
         except Exception as e:
-            print(f"⚠️ Error processing {consumer_type}: {e}")
+            print(f"Error processing {consumer_type}: {e}")
     
     return scenario_results
 
-def create_consumer_load_plots(consumer_results):
+def create_consumer_load_plots(consumer_results, system_params):
     """Create 4 individual consumer plots + 1 cost breakdown"""
     
     # Create 4 individual consumer plots
     for i, consumer in enumerate(consumer_results):
         print(f"📊 Creating Consumer Plot {i+1}: {consumer['name']}...")
-        create_individual_consumer_plot(consumer, i+1)
+        create_individual_consumer_plot(consumer, i+1, system_params)
     
     # Create combined cost breakdown
     print("📊 Creating Consumer Cost Breakdown...")
-    create_consumer_cost_breakdown(consumer_results)
+    create_consumer_cost_breakdown(consumer_results, system_params)
 
-def create_individual_consumer_plot(consumer, plot_num):
+def create_individual_consumer_plot(consumer, plot_num, system_params):
     """Create individual plot for one consumer type"""
     fig, ax1 = plt.subplots(figsize=(14, 8))
     
     hours = np.arange(1, 25)
-    # Actual energy prices from bus_params.json
-    energy_prices = [1.1, 1.05, 1.0, 0.9, 0.85, 1.01, 1.05, 1.2, 1.4, 1.6, 1.5, 1.1, 
-                    1.05, 1.0, 0.95, 1.0, 1.2, 1.5, 2.1, 2.5, 2.2, 1.8, 1.4, 1.2]
+    # Load energy prices from system parameters
+    energy_prices = system_params['energy_prices']
     results = consumer['results']
     
     # Plot loads using step plots
@@ -401,8 +442,7 @@ def create_individual_consumer_plot(consumer, plot_num):
     ax1.set_xticks(range(1, 25, 2))
     ax1.grid(True, alpha=0.3)
     
-    plt.title(f'Load Profile: {consumer["name"]} (w={consumer["weight"]} DKK/kWh)', 
-             fontsize=14, fontweight='bold')
+    plt.title(f'Load Profile: {consumer["name"]} (w={consumer["weight"]} DKK/kWh)', fontsize=14, fontweight='bold')
     
     # Combined legend
     lines1, labels1 = ax1.get_legend_handles_labels()
@@ -414,25 +454,26 @@ def create_individual_consumer_plot(consumer, plot_num):
                dpi=300, bbox_inches='tight')
     plt.show()
 
-def create_consumer_cost_breakdown(consumer_results):
+def create_consumer_cost_breakdown(consumer_results, system_params):
     """Create cost breakdown for all consumer types"""
     fig, ax = plt.subplots(figsize=(14, 8))
     
     consumers = [c['name'] for c in consumer_results]
+    energy_prices = system_params['energy_prices']
+    import_tariff = system_params['import_tariff']
+    export_tariff = system_params['export_tariff']
     
     # Calculate cost components - use the actual results from optimization
     energy_costs = [c['results']['energy_cost'] for c in consumer_results]
     discomfort_costs = [c['results']['discomfort_penalty'] for c in consumer_results]
     
     # Calculate energy revenues separately (exports generate revenue)
-    energy_prices = [1.1, 1.05, 1.0, 0.9, 0.85, 1.01, 1.05, 1.2, 1.4, 1.6, 1.5, 1.1, 
-                    1.05, 1.0, 0.95, 1.0, 1.2, 1.5, 2.1, 2.5, 2.2, 1.8, 1.4, 1.2]
     energy_revenues = []
     for consumer in consumer_results:
         results = consumer['results']
         # Energy revenue is from exports (positive value)
         energy_revenue = sum(
-            (energy_prices[t] - 0.4) * exp  # energy_price - export_tariff
+            (energy_prices[t] - export_tariff) * exp
             for t, exp in enumerate(results['export_schedule'])
         )
         energy_revenues.append(energy_revenue)
@@ -466,17 +507,21 @@ def create_consumer_cost_breakdown(consumer_results):
 
 def main():
     """Main execution function"""
-    print("🚀 Q1b.v - Final Analysis: Exactly What You Want!")
+    print(" Q1b.v - Final Analysis: Exactly What You Want!")
     print("=" * 60)
     
     try:
+        # Load system parameters from data files
+        print("🔧 Loading System Parameters...")
+        system_params = load_system_parameters()
+        
         # PART 1: W-Variation Analysis (4 scenarios, 4 plots)
-        print("PART 1: W-Variation Analysis")
+        print("\nPART 1: W-Variation Analysis")
         print("-" * 40)
         w_results = solve_w_variation_scenarios()
         
         if w_results:
-            create_w_variation_plots(w_results)
+            create_w_variation_plots(w_results, system_params)
             print("✅ Part 1 Complete: 4 W-variation plots created!")
         
         # PART 2: Consumer Load Profile Analysis (4 consumers, 5 plots)
@@ -485,13 +530,13 @@ def main():
         consumer_results = solve_consumer_load_scenarios()
         
         if consumer_results:
-            create_consumer_load_plots(consumer_results)
+            create_consumer_load_plots(consumer_results, system_params)
             print("✅ Part 2 Complete: 5 Consumer profile plots created!")
         
         print("\n" + "=" * 60)
-        print("🎉 ANALYSIS COMPLETE!")
+        print(" ANALYSIS COMPLETE!")
         print("=" * 60)
-        print("📊 Total Plots Generated: 9")
+        print(" Total Plots Generated: 9")
         print("   PART 1 (W-variation): 4 plots")
         print("     - Load profiles comparison")
         print("     - Cost breakdown analysis")
@@ -502,7 +547,7 @@ def main():
         print("     - 1 consumer cost breakdown")
         
     except Exception as e:
-        print(f"❌ Error in main execution: {e}")
+        print(f"Error in main execution: {e}")
         import traceback
         traceback.print_exc()
 
