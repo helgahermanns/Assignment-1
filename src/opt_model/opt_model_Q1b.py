@@ -137,6 +137,12 @@ class ConsumerFlexibilityModelQ1b:
             self.data['discomfort_weight'] * (self.dev_plus[t].x + self.dev_minus[t].x)
             for t in range(self.T))
         
+        # Extract dual variables (shadow prices)
+        dual_energy_balance = [self.energy_balance[t].Pi for t in range(self.T)]
+        dual_deviation_balance = [self.deviation_balance[t].Pi for t in range(self.T)]
+        dual_import_max = [self.import_max_constrs[t].Pi for t in range(self.T)]
+        dual_export_max = [self.export_max_constrs[t].Pi for t in range(self.T)]
+        
         results = {
             'optimal_cost': self.model.objVal,
             'energy_cost': energy_cost,
@@ -153,7 +159,16 @@ class ConsumerFlexibilityModelQ1b:
             'total_imported': sum(self.import_grid[t].x for t in range(self.T)),
             'total_exported': sum(self.export_grid[t].x for t in range(self.T)),
             'total_dev_plus': sum(self.dev_plus[t].x for t in range(self.T)),
-            'total_dev_minus': sum(self.dev_minus[t].x for t in range(self.T))
+            'total_dev_minus': sum(self.dev_minus[t].x for t in range(self.T)),
+            # Dual variables (shadow prices)
+            'dual_energy_balance': dual_energy_balance,
+            'dual_deviation_balance': dual_deviation_balance,
+            'dual_import_max': dual_import_max,
+            'dual_export_max': dual_export_max,
+            'avg_dual_energy': sum(dual_energy_balance)/len(dual_energy_balance),
+            'avg_dual_deviation': sum(dual_deviation_balance)/len(dual_deviation_balance),
+            'peak_dual_import': max(dual_import_max),
+            'peak_dual_export': max(dual_export_max)
         }
         
         return results

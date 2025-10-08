@@ -76,13 +76,15 @@ class DataProcessor:
         print("✓ Data processing completed successfully!")
         return optimization_data
 
-    def process_for_optimization_q1b(self, raw_data: dict, discomfort_weight: float = 1.0) -> dict:
+    def process_for_optimization_q1b(self, raw_data: dict, discomfort_weight: float = 1.0, 
+                                    usage_preferences_key: Optional[str] = None) -> dict:
         """
         Process raw data into optimization-ready format for Q1b.
         
         Args:
             raw_data: Dictionary containing raw data from DataLoader
             discomfort_weight: Weight for penalizing deviations from reference load (DKK/kWh)
+            usage_preferences_key: Optional key to specify which usage preferences to use
             
         Returns:
             Dictionary containing structured optimization parameters for Q1b
@@ -99,7 +101,13 @@ class DataProcessor:
         load_max_power = appliance_params.get('FFL_01', {}).get('max_power', 3.0)
         
         # Process usage preferences for Q1b (with reference load)
-        usage_preferences = self._process_usage_preferences_q1b(raw_data, load_max_power)
+        # Use specific usage preferences file if provided
+        usage_data = raw_data
+        if usage_preferences_key and usage_preferences_key in raw_data:
+            print(f"📊 Using specific usage preferences: {usage_preferences_key}")
+            usage_data = {**raw_data, 'usage_preferences': raw_data[usage_preferences_key]}
+        
+        usage_preferences = self._process_usage_preferences_q1b(usage_data, load_max_power)
         
         # Calculate derived parameters
         pv_max_hourly = self._calculate_pv_hourly_capacity(
