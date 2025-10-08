@@ -28,6 +28,19 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 import copy
 
+# Configure matplotlib for larger fonts (better for reports)
+plt.rcParams.update({
+    'font.size': 14,           # Base font size
+    'axes.titlesize': 18,      # Title font size
+    'axes.labelsize': 16,      # Axis label font size
+    'xtick.labelsize': 14,     # X tick label font size
+    'ytick.labelsize': 14,     # Y tick label font size
+    'legend.fontsize': 14,     # Legend font size
+    'figure.titlesize': 20,    # Figure title font size
+    'lines.linewidth': 3,      # Line width
+    'lines.markersize': 8      # Marker size
+})
+
 # Add parent directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent))
 
@@ -57,6 +70,129 @@ def load_system_parameters():
         'import_tariff': import_tariff,
         'export_tariff': export_tariff
     }
+
+def print_solution_summary(scenario_results, consumer_results, system_params):
+    """Print comprehensive summary of primal and dual variables for all scenarios"""
+    
+    print("\n" + "="*80)
+    print("📊 COMPREHENSIVE SOLUTION SUMMARY - Q1.b.v")
+    print("="*80)
+    
+    # W-Variation Analysis Summary
+    print("\n🔍 PART 1: W-VARIATION ANALYSIS")
+    print("-" * 50)
+    
+    for i, scenario in enumerate(scenario_results):
+        results = scenario['results']
+        w = scenario['weight']
+        
+        print(f"\n📈 Scenario {i+1}: w = {w} DKK/kWh")
+        print(f"   Total Cost: {results['optimal_cost']:.2f} DKK")
+        print(f"   Energy Cost: {results['energy_cost']:.2f} DKK")
+        print(f"   Discomfort Cost: {results['discomfort_penalty']:.2f} DKK")
+        
+        # Key Primal Variables
+        print("   🔵 Key Primal Variables:")
+        print(f"     • Total Load: {results['total_energy_consumed']:.1f} kWh")
+        print(f"     • Grid Import: {results['total_imported']:.1f} kWh")
+        print(f"     • Grid Export: {results['total_exported']:.1f} kWh")
+        print(f"     • Over-consumption: {results['total_dev_plus']:.1f} kWh")
+        print(f"     • Under-consumption: {results['total_dev_minus']:.1f} kWh")
+        
+        # Key Dual Variables (Shadow Prices)
+        print("   🔴 Key Dual Variables (Shadow Prices):")
+        print(f"     • Avg Energy Balance Dual: {results['avg_dual_energy']:.3f} DKK/kWh")
+        print(f"     • Avg Deviation Balance Dual: {results['avg_dual_deviation']:.3f} DKK/kWh")
+        print(f"     • Peak Import Dual: {results['peak_dual_import']:.3f} DKK/kWh")
+        print(f"     • Peak Export Dual: {results['peak_dual_export']:.3f} DKK/kWh")
+        
+        # Flexibility Metrics
+        ref_total = sum(results['reference_load'])
+        flexibility_used = (results['total_dev_plus'] + results['total_dev_minus'])
+        flexibility_pct = (flexibility_used / ref_total) * 100
+        print(f"   📊 Flexibility: {flexibility_pct:.1f}% of reference load utilized")
+        
+        # Profit Analysis (negative cost = profit from grid arbitrage)
+        if results['energy_cost'] < 0:
+            profit = -results['energy_cost']
+            print(f"   💰 Grid Arbitrage Profit: {profit:.2f} DKK")
+    
+    # Consumer Profile Analysis Summary
+    print(f"\n🔍 PART 2: CONSUMER PROFILE ANALYSIS")
+    print("-" * 50)
+    
+    for i, consumer in enumerate(consumer_results):
+        results = consumer['results']
+        name = consumer['name']
+        
+        print(f"\n👤 Consumer {i+1}: {name}")
+        print(f"   Total Cost: {results['optimal_cost']:.2f} DKK")
+        print(f"   Energy Cost: {results['energy_cost']:.2f} DKK")
+        print(f"   Discomfort Cost: {results['discomfort_penalty']:.2f} DKK")
+        
+        # Key Primal Variables
+        print("   🔵 Key Primal Variables:")
+        print(f"     • Total Load: {results['total_energy_consumed']:.1f} kWh")
+        print(f"     • Grid Import: {results['total_imported']:.1f} kWh") 
+        print(f"     • Grid Export: {results['total_exported']:.1f} kWh")
+        print(f"     • Over-consumption: {results['total_dev_plus']:.1f} kWh")
+        print(f"     • Under-consumption: {results['total_dev_minus']:.1f} kWh")
+        
+        # Key Dual Variables
+        print("   🔴 Key Dual Variables (Shadow Prices):")
+        print(f"     • Avg Energy Balance Dual: {results['avg_dual_energy']:.3f} DKK/kWh")
+        print(f"     • Avg Deviation Balance Dual: {results['avg_dual_deviation']:.3f} DKK/kWh")
+        
+        # Flexibility and Profit Analysis
+        ref_total = sum(results['reference_load'])
+        flexibility_used = (results['total_dev_plus'] + results['total_dev_minus'])
+        flexibility_pct = (flexibility_used / ref_total) * 100
+        print(f"   📊 Flexibility: {flexibility_pct:.1f}% of reference load utilized")
+        
+        if results['energy_cost'] < 0:
+            profit = -results['energy_cost']
+            print(f"   💰 Grid Arbitrage Profit: {profit:.2f} DKK")
+    
+    # Comparative Analysis
+    print(f"\n🔍 COMPARATIVE INSIGHTS")
+    print("-" * 50)
+    
+    # W-variation insights
+    w_costs = [s['results']['optimal_cost'] for s in scenario_results]
+    w_flexibility = []
+    for s in scenario_results:
+        r = s['results']
+        ref_total = sum(r['reference_load'])
+        flex_used = r['total_dev_plus'] + r['total_dev_minus']
+        w_flexibility.append((flex_used / ref_total) * 100)
+    
+    print("📈 W-Variation Impact:")
+    print(f"   • Cost Range: {min(w_costs):.2f} - {max(w_costs):.2f} DKK")
+    print(f"   • Flexibility Range: {min(w_flexibility):.1f}% - {max(w_flexibility):.1f}%")
+    print(f"   • Trend: Higher w → Lower flexibility, Higher total cost")
+    
+    # Consumer insights
+    consumer_costs = [c['results']['optimal_cost'] for c in consumer_results]
+    consumer_names = [c['name'] for c in consumer_results]
+    
+    print("👥 Consumer Profile Impact:")
+    print(f"   • Cost Range: {min(consumer_costs):.2f} - {max(consumer_costs):.2f} DKK")
+    
+    # Find most/least flexible consumers
+    consumer_flex = []
+    for c in consumer_results:
+        r = c['results']
+        ref_total = sum(r['reference_load'])
+        flex_used = r['total_dev_plus'] + r['total_dev_minus']
+        consumer_flex.append((flex_used / ref_total) * 100)
+    
+    most_flexible_idx = consumer_flex.index(max(consumer_flex))
+    least_flexible_idx = consumer_flex.index(min(consumer_flex))
+    
+    print(f"   • Most Flexible: {consumer_names[most_flexible_idx]} ({consumer_flex[most_flexible_idx]:.1f}%)")
+    print(f"   • Least Flexible: {consumer_names[least_flexible_idx]} ({consumer_flex[least_flexible_idx]:.1f}%)")
+    
+    print("="*80)
 
 def get_consumer_configurations():
     """Define consumer load profiles based on realistic usage patterns"""
@@ -138,6 +274,29 @@ def solve_w_variation_scenarios():
             print(f"   Energy Cost = {results['energy_cost']:.2f} DKK")
             print(f"   Discomfort Cost = {results['discomfort_penalty']:.2f} DKK")
             print(f"   Flexibility = {flexibility_pct:.1f}%")
+            
+            # Detailed Primal and Dual Variable Reporting
+            print(f"\n🔵 PRIMAL VARIABLES (w = {w} DKK/kWh):")
+            print(f"   • Total Load: {results['total_energy_consumed']:.2f} kWh")
+            print(f"   • Grid Import: {results['total_imported']:.2f} kWh")
+            print(f"   • Grid Export: {results['total_exported']:.2f} kWh")
+            print(f"   • PV Used: {results['total_pv_used']:.2f} kWh")
+            print(f"   • Over-consumption: {results['total_dev_plus']:.2f} kWh")
+            print(f"   • Under-consumption: {results['total_dev_minus']:.2f} kWh")
+            
+            print(f"\n🔴 DUAL VARIABLES (Shadow Prices, w = {w} DKK/kWh):")
+            print(f"   • Avg Energy Balance Dual: {results['avg_dual_energy']:.4f} DKK/kWh")
+            print(f"   • Avg Deviation Balance Dual: {results['avg_dual_deviation']:.4f} DKK/kWh")
+            print(f"   • Peak Import Dual: {results['peak_dual_import']:.4f} DKK/kWh")
+            print(f"   • Peak Export Dual: {results['peak_dual_export']:.4f} DKK/kWh")
+            
+            # Economic interpretation
+            if results['avg_dual_energy'] != 0:
+                print(f"   📊 Energy Balance: Shadow price = {results['avg_dual_energy']:.4f}")
+                print(f"      → Marginal value of relaxing energy balance constraints")
+            if results['avg_dual_deviation'] != 0:
+                print(f"   📊 Deviation Balance: Shadow price = {results['avg_dual_deviation']:.4f}")
+                print(f"      → Marginal cost of allowing more flexibility deviations")
         else:
             print(f"❌ No solution found for w = {w}")
     
@@ -185,24 +344,25 @@ def create_load_profiles_comparison(scenario_results, system_params):
     
     # Secondary y-axis for energy prices
     ax2 = ax1.twinx()
-    ax2.step(hours, energy_prices, where='mid', color='purple', linewidth=2, 
+    ax2.step(hours, energy_prices, where='mid', color='purple', linewidth=3, 
             linestyle=':', label='Energy Price', alpha=0.8)
-    ax2.set_ylabel('Energy Price (DKK/kWh)', fontsize=12, color='purple')
-    ax2.tick_params(axis='y', labelcolor='purple')
+    ax2.set_ylabel('Energy Price (DKK/kWh)', fontsize=18, color='purple', fontweight='bold')
+    ax2.tick_params(axis='y', labelcolor='purple', labelsize=14)
     
-    # Formatting
-    ax1.set_xlabel('Hour of Day', fontsize=12)
-    ax1.set_ylabel('Load Consumption (kWh)', fontsize=12)
+    # Formatting with larger fonts
+    ax1.set_xlabel('Hour of Day', fontsize=18, fontweight='bold')
+    ax1.set_ylabel('Load Consumption (kWh)', fontsize=18, fontweight='bold')
     ax1.set_xlim(0.5, 24.5)
     ax1.set_xticks(range(1, 25, 2))
+    ax1.tick_params(labelsize=14)
     ax1.grid(True, alpha=0.3)
     
-    plt.title('Load Profiles Comparison with Energy Prices', fontsize=16, fontweight='bold')
+    plt.title('Load Profiles Comparison with Energy Prices', fontsize=22, fontweight='bold', pad=20)
     
-    # Combined legend
+    # Combined legend with larger font
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
-    ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left', framealpha=0.9)
+    ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left', framealpha=0.9, fontsize=16)
     
     plt.tight_layout()
     plt.savefig('Q1b_v_Load_Profiles_Comparison.png', dpi=300, bbox_inches='tight')
@@ -249,18 +409,19 @@ def create_cost_breakdown_analysis(scenario_results, system_params):
     bars2 = ax.bar(x, [-rev for rev in energy_revenues], width, label='Energy Revenue', color='lightgreen', alpha=0.8)
     bars3 = ax.bar(x + width, discomfort_costs, width, label='Discomfort Cost', color='lightblue', alpha=0.8)
     
-    # Add value labels on bars
+    # Add value labels on bars with larger font
     for i, (e_cost, e_rev, d_cost) in enumerate(zip(energy_costs, energy_revenues, discomfort_costs)):
-        ax.text(i - width, e_cost + 0.5, f'{e_cost:.1f}', ha='center', va='bottom', fontsize=10)
-        ax.text(i, -e_rev - 0.5, f'{e_rev:.1f}', ha='center', va='top', fontsize=10)
-        ax.text(i + width, d_cost + 0.5, f'{d_cost:.1f}', ha='center', va='bottom', fontsize=10)
+        ax.text(i - width, e_cost + 0.5, f'{e_cost:.1f}', ha='center', va='bottom', fontsize=14, fontweight='bold')
+        ax.text(i, -e_rev - 0.5, f'{e_rev:.1f}', ha='center', va='top', fontsize=14, fontweight='bold')
+        ax.text(i + width, d_cost + 0.5, f'{d_cost:.1f}', ha='center', va='bottom', fontsize=14, fontweight='bold')
     
-    ax.set_xlabel('Scenarios', fontsize=12)
-    ax.set_ylabel('Cost/Revenue (DKK)', fontsize=12)
-    ax.set_title('Cost Breakdown Analysis: Energy vs Discomfort', fontsize=16, fontweight='bold')
+    ax.set_xlabel('Scenarios', fontsize=18, fontweight='bold')
+    ax.set_ylabel('Cost/Revenue (DKK)', fontsize=18, fontweight='bold')
+    ax.set_title('Cost Breakdown Analysis: Energy vs Discomfort', fontsize=22, fontweight='bold', pad=20)
     ax.set_xticks(x)
-    ax.set_xticklabels(scenarios)
-    ax.legend()
+    ax.set_xticklabels(scenarios, fontsize=16, fontweight='bold')
+    ax.tick_params(labelsize=14)
+    ax.legend(fontsize=16)
     ax.grid(True, alpha=0.3)
     ax.axhline(y=0, color='black', linestyle='-', alpha=0.3)
     
@@ -288,19 +449,19 @@ def create_energy_balance_summary(scenario_results, system_params):
     bars2 = ax.bar(x - 0.5*width, exports, width, label='Grid Export', color='green', alpha=0.8)
     bars3 = ax.bar(x + 0.5*width, consumption, width, label='Consumption', color='blue', alpha=0.8)
     bars4 = ax.bar(x + 1.5*width, pv_used, width, label='PV Used', color='gold', alpha=0.8)
-    
+
     # Add value labels on bars
     for i, (imp, exp, cons, pv) in enumerate(zip(imports, exports, consumption, pv_used)):
-        ax.text(i - 1.5*width, imp + 0.5, f'{imp:.1f}', ha='center', va='bottom', fontsize=9)
-        ax.text(i - 0.5*width, exp + 0.5, f'{exp:.1f}', ha='center', va='bottom', fontsize=9)
-        ax.text(i + 0.5*width, cons + 0.5, f'{cons:.1f}', ha='center', va='bottom', fontsize=9)
-        ax.text(i + 1.5*width, pv + 0.5, f'{pv:.1f}', ha='center', va='bottom', fontsize=9)
-    
-    ax.set_xlabel('Scenarios', fontsize=12)
-    ax.set_ylabel('Energy (kWh)', fontsize=12)
+        ax.text(i - 1.5*width, imp + 0.5, f'{imp:.1f}', ha='center', va='bottom', fontsize=14, fontweight='bold')
+        ax.text(i - 0.5*width, exp + 0.5, f'{exp:.1f}', ha='center', va='bottom', fontsize=14, fontweight='bold')
+        ax.text(i + 0.5*width, cons + 0.5, f'{cons:.1f}', ha='center', va='bottom', fontsize=14, fontweight='bold')
+        ax.text(i + 1.5*width, pv + 0.5, f'{pv:.1f}', ha='center', va='bottom', fontsize=14, fontweight='bold')
+
+    ax.set_xlabel('Scenarios', fontsize=18, fontweight='bold')
+    ax.set_ylabel('Energy (kWh)', fontsize=18, fontweight='bold')
     ax.set_title('Daily Energy Balance Summary', fontsize=16, fontweight='bold')
     ax.set_xticks(x)
-    ax.set_xticklabels(scenarios)
+    ax.set_xticklabels(scenarios, fontsize=16, fontweight='bold')
     ax.legend()
     ax.grid(True, alpha=0.3)
     
@@ -324,13 +485,14 @@ def create_under_consumption_patterns(scenario_results, system_params):
         ax.bar(hours + i*0.2 - 0.3, under_consumption, width=0.2, 
                color=colors[i], alpha=0.7, label=f'{scenario["name"]}')
     
-    ax.set_title('Consumer Under-Consumption Patterns by Scenario', fontsize=16, fontweight='bold')
-    ax.set_xlabel('Hour of Day', fontsize=12)
-    ax.set_ylabel('Under-consumption (kWh)', fontsize=12)
+    ax.set_title('Consumer Under-Consumption Patterns by Scenario', fontsize=22, fontweight='bold', pad=20)
+    ax.set_xlabel('Hour of Day', fontsize=18, fontweight='bold')
+    ax.set_ylabel('Under-consumption (kWh)', fontsize=18, fontweight='bold')
     ax.set_xlim(0.5, 24.5)
     ax.set_xticks(range(1, 25, 2))
+    ax.tick_params(labelsize=14)
     ax.grid(True, alpha=0.3)
-    ax.legend()
+    ax.legend(fontsize=16)
     
     plt.tight_layout()
     plt.savefig('Q1b_v_Under_Consumption_Patterns.png', dpi=300, bbox_inches='tight')
@@ -393,6 +555,21 @@ def solve_consumer_load_scenarios():
                 print(f"   Energy Cost = {results['energy_cost']:.2f} DKK")
                 print(f"   Discomfort Cost = {results['discomfort_penalty']:.2f} DKK")
                 print(f"   Flexibility = {flexibility_pct:.1f}%")
+                
+                # Detailed Primal and Dual Variable Reporting for Consumer
+                print(f"\n🔵 PRIMAL VARIABLES ({consumer_type}):")
+                print(f"   • Total Load: {results['total_energy_consumed']:.2f} kWh")
+                print(f"   • Grid Import: {results['total_imported']:.2f} kWh")
+                print(f"   • Grid Export: {results['total_exported']:.2f} kWh")
+                print(f"   • PV Used: {results['total_pv_used']:.2f} kWh")
+                print(f"   • Over-consumption: {results['total_dev_plus']:.2f} kWh")
+                print(f"   • Under-consumption: {results['total_dev_minus']:.2f} kWh")
+                
+                print(f"\n🔴 DUAL VARIABLES ({consumer_type}):")
+                print(f"   • Avg Energy Balance Dual: {results['avg_dual_energy']:.4f} DKK/kWh")
+                print(f"   • Avg Deviation Balance Dual: {results['avg_dual_deviation']:.4f} DKK/kWh")
+                print(f"   • Peak Import Dual: {results['peak_dual_import']:.4f} DKK/kWh")
+                print(f"   • Peak Export Dual: {results['peak_dual_export']:.4f} DKK/kWh")
             else:
                 print(f"No solution found for {consumer_type}")
                 
@@ -427,27 +604,28 @@ def create_individual_consumer_plot(consumer, plot_num, system_params):
             linewidth=3, label='Reference Load', alpha=0.8)
     ax1.step(hours, results['load_schedule'], where='mid', color='blue', linewidth=3, 
             label='Actual Load', alpha=0.9)
-    
+
     # Secondary y-axis for energy prices
     ax2 = ax1.twinx()
-    ax2.step(hours, energy_prices, where='mid', color='red', linewidth=2, 
+    ax2.step(hours, energy_prices, where='mid', color='red', linewidth=3, 
             linestyle=':', label='Energy Price', alpha=0.8)
-    ax2.set_ylabel('Energy Price (DKK/kWh)', fontsize=12, color='red')
-    ax2.tick_params(axis='y', labelcolor='red')
+    ax2.set_ylabel('Energy Price (DKK/kWh)', fontsize=18, color='red')
+    ax2.tick_params(axis='y', labelcolor='red', labelsize=14)
     
-    # Formatting
-    ax1.set_xlabel('Hour of Day', fontsize=12)
-    ax1.set_ylabel('Load Consumption (kWh)', fontsize=12, color='blue')
+    # Formatting with larger fonts
+    ax1.set_xlabel('Hour of Day', fontsize=18, fontweight='bold')
+    ax1.set_ylabel('Load Consumption (kWh)', fontsize=18, color='blue', fontweight='bold')
     ax1.set_xlim(0.5, 24.5)
     ax1.set_xticks(range(1, 25, 2))
+    ax1.tick_params(labelsize=14)
     ax1.grid(True, alpha=0.3)
     
-    plt.title(f'Load Profile: {consumer["name"]} (w={consumer["weight"]} DKK/kWh)', fontsize=14, fontweight='bold')
+    plt.title(f'Load Profile: {consumer["name"]} (w={consumer["weight"]} DKK/kWh)', fontsize=20, fontweight='bold', pad=20)
     
-    # Combined legend
+    # Combined legend with larger font
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
-    ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left', framealpha=0.9)
+    ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left', framealpha=0.9, fontsize=16)
     
     plt.tight_layout()
     plt.savefig(f'Q1b_v_Consumer_{plot_num}_{consumer["name"].replace(" ", "_")}.png', 
@@ -488,15 +666,15 @@ def create_consumer_cost_breakdown(consumer_results, system_params):
     
     # Add value labels on bars
     for i, (e_cost, e_rev, d_cost) in enumerate(zip(energy_costs, energy_revenues, discomfort_costs)):
-        ax.text(i - width, e_cost + 0.5, f'{e_cost:.1f}', ha='center', va='bottom', fontsize=10)
-        ax.text(i, -e_rev - 0.5, f'{e_rev:.1f}', ha='center', va='top', fontsize=10)
-        ax.text(i + width, d_cost + 0.5, f'{d_cost:.1f}', ha='center', va='bottom', fontsize=10)
-    
-    ax.set_xlabel('Consumer Types', fontsize=12)
-    ax.set_ylabel('Cost/Revenue (DKK)', fontsize=12)
+        ax.text(i - width, e_cost + 0.5, f'{e_cost:.1f}', ha='center', va='bottom', fontsize=14, fontweight='bold')
+        ax.text(i, -e_rev - 0.5, f'{e_rev:.1f}', ha='center', va='top', fontsize=14, fontweight='bold')
+        ax.text(i + width, d_cost + 0.5, f'{d_cost:.1f}', ha='center', va='bottom', fontsize=14, fontweight='bold')
+
+    ax.set_xlabel('Consumer Types', fontsize=18, fontweight='bold')
+    ax.set_ylabel('Cost/Revenue (DKK)', fontsize=18, fontweight='bold')
     ax.set_title('Consumer Cost Breakdown: Energy vs Discomfort', fontsize=16, fontweight='bold')
     ax.set_xticks(x)
-    ax.set_xticklabels(consumers, rotation=45, ha='right')
+    ax.set_xticklabels(consumers, rotation=45, ha='right', fontsize=16, fontweight='bold')
     ax.legend()
     ax.grid(True, alpha=0.3)
     ax.axhline(y=0, color='black', linestyle='-', alpha=0.3)
@@ -533,8 +711,11 @@ def main():
             create_consumer_load_plots(consumer_results, system_params)
             print("✅ Part 2 Complete: 5 Consumer profile plots created!")
         
+        # Print comprehensive solution summary
+        print_solution_summary(w_results, consumer_results, system_params)
+        
         print("\n" + "=" * 60)
-        print(" ANALYSIS COMPLETE!")
+        print("🎉 ANALYSIS COMPLETE!")
         print("=" * 60)
         print(" Total Plots Generated: 9")
         print("   PART 1 (W-variation): 4 plots")
