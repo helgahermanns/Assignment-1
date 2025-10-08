@@ -1,1 +1,2 @@
-from .opt_model_Q1 import ConsumerFlexibilityModel
+from .opt_model_Q1a import ConsumerFlexibilityModel
+from .opt_model_Q1b import ConsumerFlexibilityModelQ1b
