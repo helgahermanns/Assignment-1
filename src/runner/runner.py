@@ -5,7 +5,7 @@ import pandas as pd
 from data_ops.data_loader import DataLoader
 from data_ops.data_processor import DataProcessor
 from data_ops.data_visualizer import DataVisualizer
-from opt_model.opt_model_Q1 import ConsumerFlexibilityModel
+from opt_model.opt_model_Q1a import ConsumerFlexibilityModel
 
 
 class Runner:
