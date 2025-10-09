@@ -34,16 +34,15 @@ def solve_q1_part_v():
         dict: Results for all scenarios
     """
     
-    print("QUESTION 1 PART V - TARIFF SCENARIO ANALYSIS")
-    print("Dataset: question_1a (with modified tariff structures)")
-    print("=" * 70)
+    print("Loading base data from question_1a dataset...")
+    print("Processing 5 scenarios with different tariff structures...")
+    print("-" * 50)
     
     try:
         # Load base data from question_1a
         project_root = Path(__file__).parent.parent.parent
         loader = DataLoader(base_path=str(project_root / "data"))
         
-        print("Loading base data from question_1a dataset...")
         base_raw_data = loader.load_data("question_1a")
         
         # Define scenarios for Q1 Part V - System-level Cost Structure Analysis
@@ -88,8 +87,11 @@ def solve_q1_part_v():
         all_results = {}
         
         # Run each scenario
+        print("\nSolving 5 scenarios...")
+        print("-" * 50)
+        
         for scenario_key, scenario_info in scenarios.items():
-            print(f"\n--- Running Scenario: {scenario_info['name']} ---")
+            print(f"\nProcessing {scenario_info['name']}...")
             
             # Modify data for this scenario
             modified_data = modify_scenario_parameters(
@@ -116,15 +118,17 @@ def solve_q1_part_v():
                     'scenario_info': scenario_info,
                     'optimization_data': optimization_data
                 }
-                print(f"✅ {scenario_info['name']}: Cost = {results['optimal_cost']:.2f} DKK")
+                print(f"Optimal solution found! Optimal objective value: {results['optimal_cost']:.2f} DKK")
             else:
-                print(f"❌ {scenario_info['name']}: Optimization failed")
+                print(f"Optimization failed for scenario: {scenario_info['name']}")
         
-        # Print comparison and analysis ONLY (no plots here)
+        # Print detailed analysis for each scenario
         if all_results:
-            print_q1v_comparison(all_results)
+            for scenario_key, scenario_data in all_results.items():
+                print_detailed_scenario_summary_q1a(scenario_key, scenario_data)
+            
+            print_comprehensive_summary_table_q1a(all_results)
             analyze_flexibility_and_profits(all_results)
-            # REMOVED: create_separate_q1v_plots(all_results)  <-- This was causing duplicates
         
         return all_results
         
@@ -173,6 +177,74 @@ def modify_scenario_parameters(raw_data, import_multiplier, export_multiplier, p
     return raw_data
 
 
+def calculate_detailed_metrics_q1a(results, scenario_info):
+    """Calculate detailed metrics for Q1a scenario analysis"""
+    
+    # Energy flows
+    import_total = results.get('total_imported', 0)
+    export_total = results.get('total_exported', 0)
+    pv_used = results.get('total_pv_used', 0)
+    total_load = results.get('total_energy_consumed', 0)
+    
+    # Get hourly data
+    hourly_load = results.get('load_schedule', [])
+    pv_production = results.get('pv_production', [])
+    
+    # Cost breakdown (simplified for Q1a without detailed tariff breakdown)
+    total_cost = results.get('optimal_cost', 0)
+    
+    # Operational patterns
+    hours_importing = sum(1 for hour_load, hour_pv in zip(hourly_load, pv_production) if hour_load > hour_pv)
+    hours_exporting = sum(1 for hour_load, hour_pv in zip(hourly_load, pv_production) if hour_pv > hour_load)
+    
+    # Peak operations
+    peak_import = max([max(0, load - pv) for load, pv in zip(hourly_load, pv_production)]) if hourly_load and pv_production else 0
+    peak_export = max([max(0, pv - load) for load, pv in zip(hourly_load, pv_production)]) if hourly_load and pv_production else 0
+    
+    # PV utilization
+    total_pv_available = sum(pv_production) if pv_production else 0
+    pv_utilization = (pv_used / total_pv_available * 100) if total_pv_available > 0 else 0
+    
+    return {
+        'total_cost': total_cost,
+        'import_total': import_total,
+        'export_total': export_total,
+        'pv_used': pv_used,
+        'pv_utilization': pv_utilization,
+        'hours_importing': hours_importing,
+        'hours_exporting': hours_exporting,
+        'peak_import': peak_import,
+        'peak_export': peak_export,
+        'total_load': total_load
+    }
+
+def print_detailed_scenario_summary_q1a(scenario_key, scenario_data):
+    """Print detailed summary for a single Q1a scenario"""
+    
+    results = scenario_data['results']
+    scenario_info = scenario_data['scenario_info']
+    metrics = calculate_detailed_metrics_q1a(results, scenario_info)
+    
+    print(f"\n" + "=" * 80)
+    print(f"DETAILED ANALYSIS - SCENARIO {scenario_info['name']}")
+    print("=" * 80)
+    
+    print(f"\nCOST BREAKDOWN:")
+    print(f"  NET TOTAL COST:         {metrics['total_cost']:.2f} DKK")
+    
+    print(f"\nENERGY FLOWS:")
+    print(f"  Total import:           {metrics['import_total']:.2f} kWh")
+    print(f"  Total export:           {metrics['export_total']:.2f} kWh")
+    print(f"  PV self-consumption:    {metrics['pv_used']:.2f} kWh")
+    print(f"  PV utilization:         {metrics['pv_utilization']:.1f}%")
+    
+    print(f"\nOPERATIONAL PATTERNS:")
+    print(f"  Hours importing:         {metrics['hours_importing']}")
+    print(f"  Hours exporting:         {metrics['hours_exporting']}")
+    print(f"  Peak operations:")
+    print(f"    - Peak import:         {metrics['peak_import']:.2f} kW")
+    print(f"    - Peak export:         {metrics['peak_export']:.2f} kW")
+
 def analyze_flexibility_and_profits(all_results):
     """
     Analyze how cost structures impact consumer flexibility and profits
@@ -186,10 +258,10 @@ def analyze_flexibility_and_profits(all_results):
     
     base_results = all_results.get('base', {}).get('results', {})
     if not base_results:
-        print("❌ Cannot perform analysis - base case missing")
+        print("Cannot perform analysis - base case missing")
         return
     
-    print("\n📊 CONSUMER FLEXIBILITY METRICS:")
+    print("\nCONSUMER FLEXIBILITY METRICS:")
     print("-" * 50)
     
     for scenario_key, scenario_data in all_results.items():
@@ -221,7 +293,7 @@ def analyze_flexibility_and_profits(all_results):
         print(f"  PV self-consumption: {self_consumption_rate:.1f}%")
         print(f"  Grid dependency: {grid_dependency:.1f}%")
     
-    print("\n💰 ECONOMIC IMPACT ANALYSIS:")
+    print("\nECONOMIC IMPACT ANALYSIS:")
     print("-" * 50)
     
     base_cost = base_results.get('optimal_cost', 0)
@@ -245,13 +317,13 @@ def analyze_flexibility_and_profits(all_results):
         
         # Interpretation
         if cost_impact > 1.0:
-            print(f"  📈 LESS FAVORABLE: Consumer pays {cost_impact:.2f} DKK more")
+            print(f"  LESS FAVORABLE: Consumer pays {cost_impact:.2f} DKK more")
         elif cost_impact < -1.0:
-            print(f"  📉 MORE FAVORABLE: Consumer saves {-cost_impact:.2f} DKK")
+            print(f"  MORE FAVORABLE: Consumer saves {-cost_impact:.2f} DKK")
         else:
-            print(f"  ↔️  NEUTRAL: Minimal cost impact")
+            print(f"  NEUTRAL: Minimal cost impact")
     
-    print("\n🔍 KEY INSIGHTS:")
+    print("\nKEY INSIGHTS:")
     print("-" * 50)
     print("• Higher import tariffs → Increased PV self-consumption, reduced grid dependency")
     print("• Lower export tariffs → Less incentive to overproduce, more direct consumption")
@@ -259,71 +331,58 @@ def analyze_flexibility_and_profits(all_results):
     print("• Combined unfavorable conditions → Maximum consumer adaptation needed")
 
 
-def print_q1v_comparison(all_results):
-    """Print comparison table for all scenarios"""
+def print_comprehensive_summary_table_q1a(all_results):
+    """Print comprehensive summary table for all Q1a scenarios"""
     
     print("\n" + "=" * 80)
-    print("Q1 PART V - TARIFF SCENARIO COMPARISON")
+    print("Q1(v) SCENARIO ANALYSIS RESULTS")
     print("=" * 80)
+    print("QUESTION 1a PART V - SCENARIO ANALYSIS")
+    print("=" * 50)
     
-    print(f"{'Scenario':<25} {'Cost':<8} {'Load':<8} {'Import':<8} {'Export':<8} {'PV Used':<8} {'PV %':<6}")
-    print(f"{'':25} {'(DKK)':<8} {'(kWh)':<8} {'(kWh)':<8} {'(kWh)':<8} {'(kWh)':<8} {'':6}")
-    print("-" * 85)
+    print("\n" + "=" * 100)
+    print("COMPREHENSIVE SUMMARY TABLE")
+    print("=" * 100)
     
-    base_cost = None
+    # Table header
+    print(f"{'Scenario':<20} {'Cost':<8} {'Import':<8} {'Export':<8} {'PV Self':<8} {'PV Util':<8} {'H_imp':<6} {'H_exp':<6}")
+    print(f"{'':20} {'(DKK)':<8} {'(kWh)':<8} {'(kWh)':<8} {'(kWh)':<8} {'(%)':<8} {'':6} {'':6}")
+    print("-" * 100)
     
     for scenario_key, scenario_data in all_results.items():
         results = scenario_data['results']
-        scenario_name = scenario_data['scenario_info']['name']
+        scenario_info = scenario_data['scenario_info']
+        metrics = calculate_detailed_metrics_q1a(results, scenario_info)
         
-        cost = results['optimal_cost']
-        consumption = results['total_energy_consumed']
-        import_total = results['total_imported'] 
-        export_total = results['total_exported']
-        pv_used = results['total_pv_used']
-        
-        # Calculate PV utilization percentage
-        total_pv_available = sum(results['pv_production'])
-        pv_utilization = (pv_used / total_pv_available) * 100 if total_pv_available > 0 else 0
-        
-        # Store base case for comparison
-        if scenario_key == 'base':
-            base_cost = cost
-        
-        print(f"{scenario_name:<25} {cost:<8.2f} {consumption:<8.1f} {import_total:<8.2f} {export_total:<8.2f} {pv_used:<8.2f} {pv_utilization:<6.1f}")
-        
-        # Print scenario description
-        scenario_desc = scenario_data['scenario_info'].get('description', '')
-        print(f"{'└─ ' + scenario_desc:<85}")
+        print(f"{scenario_info['name']:<20} "
+              f"{metrics['total_cost']:<8.2f} "
+              f"{metrics['import_total']:<8.2f} "
+              f"{metrics['export_total']:<8.2f} "
+              f"{metrics['pv_used']:<8.2f} "
+              f"{metrics['pv_utilization']:<8.1f} "
+              f"{metrics['hours_importing']:<6} "
+              f"{metrics['hours_exporting']:<6}")
     
-    print("-" * 85)
-    
-    # Calculate cost differences from base case
-    if base_cost is not None:
-        print(f"\n{'Cost Impact vs Base Case:':<25}")
-        print("-" * 40)
-        
-        for scenario_key, scenario_data in all_results.items():
-            if scenario_key != 'base':
-                results = scenario_data['results']
-                scenario_name = scenario_data['scenario_info']['name']
-                cost_diff = results['optimal_cost'] - base_cost
-                cost_diff_pct = (cost_diff / base_cost) * 100
-                
-                print(f"{scenario_name:<25} {cost_diff:+8.2f} DKK ({cost_diff_pct:+5.1f}%)")
+    print("=" * 100)
 
 
 def create_separate_q1v_plots(all_results):
     """Create separate individual plots for Q1 Part V analysis"""
     
-    # Set professional style
+    # Set professional style matching Q1b_v and Q1c_v
     plt.style.use('default')
     plt.rcParams.update({
-        'font.size': 12,
-        'font.family': 'Arial',
-        'figure.figsize': (12, 8),
+        'font.size': 14,
+        'font.family': 'sans-serif',
+        'figure.figsize': (14, 10),
         'axes.grid': True,
-        'grid.alpha': 0.3
+        'grid.alpha': 0.3,
+        'axes.linewidth': 1.5,
+        'xtick.labelsize': 12,
+        'ytick.labelsize': 12,
+        'axes.titlesize': 16,
+        'axes.labelsize': 14,
+        'legend.fontsize': 12
     })
     
     scenarios = list(all_results.keys())
@@ -337,78 +396,91 @@ def create_separate_q1v_plots(all_results):
     cost_diffs = [cost - base_cost for cost in costs]
     
     # Plot 1: Total Daily Cost by Scenario
-    fig1, ax1 = plt.subplots(figsize=(12, 8))
+    fig1, ax1 = plt.subplots(figsize=(14, 10))
     colors = ['navy', 'crimson', 'darkorange', 'purple', 'darkgreen'][:len(scenarios)]
-    bars1 = ax1.bar(scenario_names, costs, color=colors, alpha=0.8, edgecolor='black', linewidth=1)
-    ax1.set_ylabel('Total Daily Cost (DKK)', fontsize=14)
-    ax1.set_title('Total Daily Cost by Scenario', fontsize=16, fontweight='bold', pad=20)
-    ax1.tick_params(axis='x', rotation=45, labelsize=12)
-    ax1.grid(True, alpha=0.3)
+    bars1 = ax1.bar(scenario_names, costs, color=colors, alpha=0.8, edgecolor='black', linewidth=2)
+    ax1.set_ylabel('Total Daily Cost (DKK)', fontsize=16, fontweight='bold')
+    #ax1.set_title('Total Daily Cost by Scenario', fontsize=18, fontweight='bold', pad=25)
+    ax1.tick_params(axis='x', rotation=45, labelsize=14)
+    ax1.tick_params(axis='y', labelsize=14)
+    ax1.grid(True, alpha=0.3, linewidth=1)
     
     # Add value labels on bars
     for bar, cost in zip(bars1, costs):
         ax1.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.3, 
-                f'{cost:.2f}', ha='center', va='bottom', fontweight='bold', fontsize=11)
+                f'{cost:.2f}', ha='center', va='bottom', fontweight='bold', fontsize=13)
     
     plt.tight_layout()
-    plt.savefig('Q1v_Total_Daily_Cost.png', dpi=300, bbox_inches='tight')
+    plt.savefig('Q1av_Total_Daily_Cost.png', dpi=300, bbox_inches='tight')
     plt.show()
     print("Total daily cost plot saved as 'Q1v_Total_Daily_Cost.png'")
     
     # Plot 2: Import vs Export by Scenario
-    fig2, ax2 = plt.subplots(figsize=(12, 8))
+    fig2, ax2 = plt.subplots(figsize=(14, 10))
     x_pos = np.arange(len(scenario_names))
     width = 0.35
     
-    bars_import = ax2.bar(x_pos - width/2, imports, width, label='Import', color='crimson', alpha=0.8, edgecolor='black')
-    bars_export = ax2.bar(x_pos + width/2, exports, width, label='Export', color='forestgreen', alpha=0.8, edgecolor='black')
-    ax2.set_ylabel('Energy (kWh)', fontsize=14)
-    ax2.set_title('Import vs Export by Scenario', fontsize=16, fontweight='bold', pad=20)
+    bars_import = ax2.bar(x_pos - width/2, imports, width, label='Import', color='crimson', alpha=0.8, edgecolor='black', linewidth=2)
+    bars_export = ax2.bar(x_pos + width/2, exports, width, label='Export', color='forestgreen', alpha=0.8, edgecolor='black', linewidth=2)
+    ax2.set_ylabel('Energy (kWh)', fontsize=16, fontweight='bold')
+    #ax2.set_title('Import vs Export by Scenario', fontsize=18, fontweight='bold', pad=25)
     ax2.set_xticks(x_pos)
-    ax2.set_xticklabels(scenario_names, rotation=45, fontsize=12)
-    ax2.legend(fontsize=12, loc='upper right')
-    ax2.grid(True, alpha=0.3)
+    ax2.set_xticklabels(scenario_names, rotation=45, fontsize=14)
+    ax2.tick_params(axis='y', labelsize=14)
+    ax2.legend(fontsize=14, loc='upper right')
+    ax2.grid(True, alpha=0.3, linewidth=1)
     
     # Add value labels
     for bar, val in zip(bars_import, imports):
         ax2.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.2, 
-                f'{val:.1f}', ha='center', va='bottom', fontweight='bold', fontsize=10)
+                f'{val:.1f}', ha='center', va='bottom', fontweight='bold', fontsize=12)
     for bar, val in zip(bars_export, exports):
         if val > 0.1:  # Only show label if export is significant
             ax2.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.1, 
-                    f'{val:.1f}', ha='center', va='bottom', fontweight='bold', fontsize=10)
+                    f'{val:.1f}', ha='center', va='bottom', fontweight='bold', fontsize=12)
     
     plt.tight_layout()
-    plt.savefig('Q1v_Import_Export.png', dpi=300, bbox_inches='tight')
+    plt.savefig('Q1av_Import_Export.png', dpi=300, bbox_inches='tight')
     plt.show()
     print("Import vs Export plot saved as 'Q1v_Import_Export.png'")
     
     # Plot 3: Cost Impact vs Base Case
-    fig3, ax3 = plt.subplots(figsize=(12, 8))
+    fig3, ax3 = plt.subplots(figsize=(14, 10))
     colors_impact = ['gray' if abs(diff) < 0.1 else 'forestgreen' if diff < 0 else 'crimson' for diff in cost_diffs]
-    bars3 = ax3.bar(scenario_names, cost_diffs, color=colors_impact, alpha=0.8, edgecolor='black', linewidth=1)
-    ax3.set_ylabel('Cost Difference from Base (DKK)', fontsize=14)
-    ax3.set_title('Cost Impact vs Base Case', fontsize=16, fontweight='bold', pad=20)
-    ax3.tick_params(axis='x', rotation=45, labelsize=12)
-    ax3.axhline(y=0, color='black', linestyle='-', alpha=0.8, linewidth=2)
-    ax3.grid(True, alpha=0.3)
+    bars3 = ax3.bar(scenario_names, cost_diffs, color=colors_impact, alpha=0.8, edgecolor='black', linewidth=2)
+    ax3.set_ylabel('Cost Difference from Base (DKK)', fontsize=16, fontweight='bold')
+    #ax3.set_title('Cost Impact vs Base Case', fontsize=18, fontweight='bold', pad=25)
+    ax3.tick_params(axis='x', rotation=45, labelsize=14)
+    ax3.tick_params(axis='y', labelsize=14)
+    ax3.axhline(y=0, color='black', linestyle='-', alpha=0.8, linewidth=3)
+    ax3.grid(True, alpha=0.3, linewidth=1)
     
     # Add value labels
     for bar, diff in zip(bars3, cost_diffs):
         y_pos = bar.get_height() + (0.15 if diff >= 0 else -0.4)
         ax3.text(bar.get_x() + bar.get_width()/2, y_pos, 
                 f'{diff:+.2f}', ha='center', va='bottom' if diff >= 0 else 'top', 
-                fontweight='bold', fontsize=11)
+                fontweight='bold', fontsize=13)
     
     plt.tight_layout()
-    plt.savefig('Q1v_Cost_Impact.png', dpi=300, bbox_inches='tight')
+    plt.savefig('Q1av_Cost_Impact.png', dpi=300, bbox_inches='tight')
     plt.show()
     print("Cost impact plot saved as 'Q1v_Cost_Impact.png'")
 
 def create_tariff_focused_comparison(all_results):
     """Create comparison focused on import/export tariff changes vs base case"""
     
-    fig, ax = plt.subplots(figsize=(16, 10))
+    # Set enhanced styling
+    plt.rcParams.update({
+        'font.size': 14,
+        'axes.titlesize': 18,
+        'axes.labelsize': 16,
+        'xtick.labelsize': 14,
+        'ytick.labelsize': 14,
+        'legend.fontsize': 14
+    })
+    
+    fig, ax = plt.subplots(figsize=(16, 12))
     
     hours = np.arange(1, 25)
     
@@ -459,32 +531,32 @@ def create_tariff_focused_comparison(all_results):
                      color='dimgray', linewidth=2.5, alpha=0.6, 
                      linestyle=':', where='mid', zorder=2)
     
-    ax.set_xlabel('Hour', fontsize=14)
-    ax.set_ylabel('Load (kW)', fontsize=14)
-    ax.set_title('Import/Export Tariff Impact on Consumer Flexibility', 
-                fontsize=16, fontweight='bold', pad=20)
+    ax.set_xlabel('Hour', fontsize=16, fontweight='bold')
+    ax.set_ylabel('Load (kW)', fontsize=16, fontweight='bold')
+    #ax.set_title('Import/Export Tariff Impact on Consumer Flexibility', fontsize=18, fontweight='bold', pad=25)
     ax.set_xlim(0.5, 24.5)
     ax.set_ylim(-0.1, 3.2)
-    ax.grid(True, alpha=0.3)
+    ax.grid(True, alpha=0.3, linewidth=1)
+    ax.tick_params(axis='both', labelsize=14)
     
     # Configure price axis
-    ax_price.set_ylabel('Energy Price (DKK/kWh)', fontsize=12, color='dimgray')
-    ax_price.tick_params(axis='y', labelcolor='dimgray', labelsize=10)
+    ax_price.set_ylabel('Energy Price (DKK/kWh)', fontsize=14, color='dimgray', fontweight='bold')
+    ax_price.tick_params(axis='y', labelcolor='dimgray', labelsize=12)
     ax_price.set_ylim(0.8, 2.6)
     
-    # Create legends - FIXED POSITIONING
-    load_legend = ax.legend(fontsize=11, loc='upper left',  # Changed to upper left
-                           title='Load Schedules', title_fontsize=12, 
+    # Create legends with enhanced styling
+    load_legend = ax.legend(fontsize=14, loc='upper left',
+                           title='Load Schedules', title_fontsize=16, 
                            framealpha=0.95)
     
-    price_legend = ax_price.legend(['Base Energy Prices'], fontsize=11, loc='lower right', 
-                                  title='Energy Prices', title_fontsize=12, 
+    price_legend = ax_price.legend(['Base Energy Prices'], fontsize=12, loc='lower right', 
+                                  title='Energy Prices', title_fontsize=14, 
                                   framealpha=0.95)
     
     ax.add_artist(load_legend)
     
     plt.tight_layout()
-    plt.savefig('Q1v_Tariff_Impact_Comparison.png', dpi=300, bbox_inches='tight')
+    plt.savefig('Q1av_Tariff_Impact_Comparison.png', dpi=300, bbox_inches='tight')
     plt.show()
     print("Tariff impact comparison saved as 'Q1v_Tariff_Impact_Comparison.png'")
 
@@ -492,7 +564,17 @@ def create_tariff_focused_comparison(all_results):
 def create_pricing_mechanism_comparison(all_results):
     """Create comparison focused on time-varying pricing mechanisms"""
     
-    fig, ax = plt.subplots(figsize=(16, 10))
+    # Set enhanced styling
+    plt.rcParams.update({
+        'font.size': 14,
+        'axes.titlesize': 18,
+        'axes.labelsize': 16,
+        'xtick.labelsize': 14,
+        'ytick.labelsize': 14,
+        'legend.fontsize': 14
+    })
+    
+    fig, ax = plt.subplots(figsize=(16, 12))
     
     hours = np.arange(1, 25)
     
@@ -549,17 +631,17 @@ def create_pricing_mechanism_comparison(all_results):
         
         price_labels.append(f'{scenario_name} Prices')
     
-    ax.set_xlabel('Hour', fontsize=14)
-    ax.set_ylabel('Load (kW)', fontsize=14)
-    ax.set_title('Time-Varying Pricing Impact on Consumer Flexibility', 
-                fontsize=16, fontweight='bold', pad=20)
+    ax.set_xlabel('Hour', fontsize=16, fontweight='bold')
+    ax.set_ylabel('Load (kW)', fontsize=16, fontweight='bold')
+    #ax.set_title('Time-Varying Pricing Impact on Consumer Flexibility', fontsize=18, fontweight='bold', pad=25)
     ax.set_xlim(0.5, 24.5)
     ax.set_ylim(-0.1, 3.2)
-    ax.grid(True, alpha=0.3)
+    ax.grid(True, alpha=0.3, linewidth=1)
+    ax.tick_params(axis='both', labelsize=14)
     
     # Configure price axis with extended range for peak prices
-    ax_price.set_ylabel('Energy Price (DKK/kWh)', fontsize=12, color='dimgray')
-    ax_price.tick_params(axis='y', labelcolor='dimgray', labelsize=10)
+    ax_price.set_ylabel('Energy Price (DKK/kWh)', fontsize=14, color='dimgray', fontweight='bold')
+    ax_price.tick_params(axis='y', labelcolor='dimgray', labelsize=12)
     
     # Dynamic scaling for higher peak prices
     all_prices = []
@@ -571,38 +653,52 @@ def create_pricing_mechanism_comparison(all_results):
     max_price = max(all_prices) * 1.05
     ax_price.set_ylim(min_price, max_price)
     
-    # Add peak hours shading
-    ax.axvspan(7, 19, alpha=0.1, color='red', zorder=0)
+    # Add peak hours shading with enhanced visibility
+    ax.axvspan(7, 19, alpha=0.15, color='red', zorder=0, label='Peak Hours')
     
-    # Create legends - FIXED POSITIONING
-    load_legend = ax.legend(fontsize=11, loc='upper left',  # Changed to upper left
-                           title='Load Schedules', title_fontsize=12, 
+    # Create legends with enhanced styling
+    load_legend = ax.legend(fontsize=14, loc='upper left',
+                           title='Load Schedules', title_fontsize=16, 
                            framealpha=0.95)
     
-    price_legend = ax_price.legend(price_labels, fontsize=11, loc='lower right', 
-                                  title='Energy Prices', title_fontsize=12, 
+    price_legend = ax_price.legend(price_labels, fontsize=12, loc='lower right', 
+                                  title='Energy Prices', title_fontsize=14, 
                                   framealpha=0.95)
     
     ax.add_artist(load_legend)
     
     plt.tight_layout()
-    plt.savefig('Q1v_Pricing_Mechanism_Comparison.png', dpi=300, bbox_inches='tight')
+    plt.savefig('Q1av_Pricing_Mechanism_Comparison.png', dpi=300, bbox_inches='tight')
     plt.show()
     print("Pricing mechanism comparison saved as 'Q1v_Pricing_Mechanism_Comparison.png'")
 
 # Replace the create_improved_hourly_load_comparison function call in your main section:
 if __name__ == "__main__":
-    print("Running Q1 Part V...")
+    print("Q1(v) SCENARIO ANALYSIS")
+    print("=" * 80)
+    print("QUESTION 1a PART V - SCENARIO ANALYSIS: TARIFF IMPACT & PRICING MECHANISMS")
+    print("=" * 80)
+    
     results = solve_q1_part_v()
     
     if results:
-        print(f"\n✅ Q1 Part V completed successfully! Analyzed {len(results)} scenarios.")
+        print(f"\nQ1 Part V completed successfully! Analyzed {len(results)} scenarios.")
         
         # Create all plots
-        print("\nCreating visualizations...")
+        print("\nGenerating plots...")
         create_separate_q1v_plots(results)
-        create_tariff_focused_comparison(results)      # New plot 1
-        create_pricing_mechanism_comparison(results)   # New plot 2
+        create_tariff_focused_comparison(results)
+        create_pricing_mechanism_comparison(results)
+        print("Plots completed.")
+        
+        print("\n" + "=" * 80)
+        print("ANALYSIS COMPLETE")
+        print("\nVISUALIZATIONS GENERATED:")
+        print("1. Total daily cost by scenario")
+        print("2. Import vs export comparison")
+        print("3. Cost impact vs base case")
+        print("4. Tariff impact comparison")  
+        print("5. Pricing mechanism comparison")
         
     else:
-        print("\n❌ Q1 Part V failed!")
+        print("\nQ1 Part V analysis failed!")

@@ -137,6 +137,77 @@ class DataProcessor:
         print("✓ Q1b data processing completed successfully!")
         return optimization_data
 
+    def process_for_optimization_unified(self, raw_data: dict, question_type: str = "general", 
+                                       discomfort_weight: float = 1.0, 
+                                       usage_preferences_key: Optional[str] = None) -> dict:
+        """
+        Unified processing method that works for all optimization models (Q1a, Q1b, Q1c).
+        
+        Args:
+            raw_data: Dictionary containing raw data from DataLoader
+            question_type: Type of question ('q1a', 'q1b', 'q1c', 'general')
+            discomfort_weight: Weight for penalizing deviations from reference load
+            usage_preferences_key: Optional key to specify which usage preferences to use
+            
+        Returns:
+            Dictionary containing structured optimization parameters compatible with all models
+        """
+        print(f"Processing data for {question_type.upper()} optimization...")
+        
+        # Extract and process each data component
+        bus_params = self._process_bus_parameters(raw_data.get('bus_params'))
+        appliance_params = self._process_appliance_parameters(raw_data.get('appliance_params'))
+        der_production = self._process_der_production(raw_data.get('DER_production'))
+        consumer_params = self._process_consumer_parameters(raw_data.get('consumer_params'))
+        
+        # Get load max power for unit conversion
+        load_max_power = appliance_params.get('FFL_01', {}).get('max_power', 3.0)
+        
+        # Process usage preferences based on question type
+        if question_type in ['q1b', 'q1c']:
+            # Use Q1b processing for reference load profiles
+            usage_data = raw_data.get(usage_preferences_key or 'usage_preferences', raw_data.get('usage_preferences', {}))
+            usage_preferences = self._process_usage_preferences_q1b(usage_data or {}, load_max_power)
+        else:
+            # Use general processing for Q1a
+            usage_preferences = self._process_usage_preferences(raw_data, load_max_power)
+        
+        # Calculate derived parameters
+        pv_max_hourly = self._calculate_pv_hourly_capacity(
+            der_production.get('pv_profile', []),
+            appliance_params.get('PV_01', {}).get('max_power', 3.0)
+        )
+        
+        # Structure data for optimization (unified format)
+        optimization_data = {
+            'T': 24,  # Time horizon (hours)
+            'import_tariff': bus_params.get('import_tariff'),
+            'export_tariff': bus_params.get('export_tariff'),
+            'max_import': bus_params.get('max_import'),
+            'max_export': bus_params.get('max_export'),
+            'energy_prices': bus_params.get('energy_prices'),
+            'pv_max_hourly': pv_max_hourly,
+            'load_max': appliance_params.get('FFL_01', {}).get('max_power', 3.0),
+            'min_daily_energy': usage_preferences.get('min_daily_energy'),
+            'consumer_id': consumer_params.get('consumer_id'),
+            'appliances': appliance_params,
+            'appliance_params': appliance_params,  # For backward compatibility
+            'discomfort_weight': discomfort_weight,
+            'usage_preferences': usage_preferences
+        }
+        
+        # Add Q1b/Q1c specific data
+        if question_type in ['q1b', 'q1c']:
+            optimization_data.update({
+                'reference_load': usage_preferences.get('reference_load', [0] * 24)
+            })
+        
+        # Validate processed data
+        self._validate_optimization_data(optimization_data)
+        
+        print(f"{question_type.upper()} data processing completed successfully!")
+        return optimization_data
+
     def _process_bus_parameters(self, bus_data: Optional[List[Dict]]) -> dict:
         """Process bus/grid parameters."""
         if not bus_data or not bus_data[0]:
@@ -185,6 +256,21 @@ class DataProcessor:
                     'ramp_down': load['max_ramp_rate_down_ratio'],
                     'min_on_time': load.get('min_on_time_h', 0),
                     'min_off_time': load.get('min_off_time_h', 0)
+                }
+        
+        # Process storage parameters (for Q1c battery storage)
+        if 'storage' in appliance_data and appliance_data['storage']:
+            for storage in appliance_data['storage']:
+                appliances[storage['storage_id']] = {
+                    'type': 'storage',
+                    'storage_capacity_kWh': storage['storage_capacity_kWh'],
+                    'max_charging_power_ratio': storage['max_charging_power_ratio'],
+                    'max_discharging_power_ratio': storage['max_discharging_power_ratio'],
+                    'charging_efficiency': storage['charging_efficiency'],
+                    'discharging_efficiency': storage['discharging_efficiency'],
+                    # Calculate derived power limits
+                    'max_charge_power_kW': storage['storage_capacity_kWh'] * storage['max_charging_power_ratio'],
+                    'max_discharge_power_kW': storage['storage_capacity_kWh'] * storage['max_discharging_power_ratio']
                 }
         
         return appliances
@@ -257,12 +343,12 @@ class DataProcessor:
             # Convert ratios to actual kWh: ratio × max_power
             reference_load = [ratio * load_max_power for ratio in profile_ratios]
                 
-            print(f"📊 Reference load profile created from ratios: {sum(reference_load):.1f} kWh total")
-            print(f"📏 Unit conversion: ratios × {load_max_power} kW = kWh per hour")
+            print(f"Reference load profile created from ratios: {sum(reference_load):.1f} kWh total")
+            print(f" Unit conversion: ratios × {load_max_power} kW = kWh per hour")
         else:
             # Default uniform reference load (equivalent to 8 hour-equivalents = 24 kWh)
             reference_load = [1.0] * 24  # 1 kWh per hour = 24 kWh total
-            print(f"📊 Using default uniform reference load: {sum(reference_load):.1f} kWh total")
+            print(f" Using default uniform reference load: {sum(reference_load):.1f} kWh total")
         
         return {
             'reference_load': reference_load,
@@ -296,12 +382,20 @@ class DataProcessor:
         """Validate that optimization data is complete and consistent."""
         required_keys = [
             'T', 'import_tariff', 'export_tariff', 'max_import', 'max_export',
-            'energy_prices', 'pv_max_hourly', 'load_max', 'min_daily_energy'
+            'energy_prices', 'pv_max_hourly', 'load_max'
         ]
+        
+        # Optional keys that might be None for some questions
+        optional_keys = ['min_daily_energy']
         
         for key in required_keys:
             if key not in data or data[key] is None:
                 raise ValueError(f"Required parameter '{key}' is missing or None")
+        
+        # Check optional keys but don't fail if they're None
+        for key in optional_keys:
+            if key not in data:
+                data[key] = None  # Set to None if missing
         
         # Validate time series data
         if len(data['energy_prices']) != data['T']:
@@ -310,11 +404,11 @@ class DataProcessor:
         if len(data['pv_max_hourly']) != data['T']:
             raise ValueError(f"PV profile must have {data['T']} hours")
         
-        # Validate positive values
-        if data['min_daily_energy'] <= 0:
+        # Validate positive values (only if not None)
+        if data['min_daily_energy'] is not None and data['min_daily_energy'] <= 0:
             raise ValueError("Minimum daily energy must be positive")
         
-        print("✓ Data validation passed")
+        print("Data validation passed")
 
     def _validate_optimization_data_q1b(self, data: dict) -> None:
         """Validate that Q1b optimization data is complete and consistent."""

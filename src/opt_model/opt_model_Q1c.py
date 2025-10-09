@@ -27,19 +27,27 @@ class ConsumerFlexibilityModelQ1c:
         self.data = data
         self.T = data['T']  # Time horizon (24 hours)
         
-        # Battery parameters from specification
-        self.eta_c = 0.9    # Charging efficiency
-        self.eta_r = 1.8    # Discharge efficiency (1/η_r = discharge efficiency)
-        self.s_max = 6.0    # Maximum battery capacity (kWh)
-        self.c_max = 0.9    # Maximum charge rate (kW)
-        self.r_max = 1.8    # Maximum discharge rate (kW)
-        self.s_0 = 3.0      # Initial SoC (kWh)
-        self.s_T = 3.0      # Final SoC (kWh)
-        self.epsilon = 1e-6 # Small epsilon for tie-breaker
+        # Battery parameters from unified data structure (storage appliance BESS_01)
+        appliances = data.get('appliances', {})
+        if 'BESS_01' not in appliances:
+            raise ValueError("BESS_01 storage parameters not found in appliances data")
+            
+        storage_params = appliances['BESS_01']
+        if storage_params.get('type') != 'storage':
+            raise ValueError("BESS_01 is not a storage appliance")
+            
+        self.s_max = storage_params['storage_capacity_kWh']  # Maximum battery capacity (kWh)
+        self.eta_c = storage_params['charging_efficiency']    # Charging efficiency
+        self.eta_r = storage_params['discharging_efficiency'] # Discharge efficiency
+        self.c_max = storage_params['max_charge_power_kW']    # Maximum charge rate (kW)
+        self.r_max = storage_params['max_discharge_power_kW'] # Maximum discharge rate (kW)
+        self.s_0 = self.s_max / 2  # Initial SoC (50% of capacity)
+        self.s_T = self.s_max / 2  # Final SoC (50% of capacity)
+        self.epsilon = 1e-3 # Small epsilon for tie-breaker (increased to prevent simultaneous charge/discharge)
         
         # Create Gurobi model
         self.model = gp.Model("ConsumerFlexibilityQ1c")
-        self.model.setParam('OutputFlag', 1)  # Enable output
+        self.model.setParam('OutputFlag', 0)  # Disable Gurobi output
         
         # Initialize variables and constraints
         self._create_variables()
@@ -64,9 +72,7 @@ class ConsumerFlexibilityModelQ1c:
         self.discharge = self.model.addVars(self.T, name="discharge", lb=0, ub=self.r_max) # rt (discharge rate, kW)
         self.soc = self.model.addVars(self.T, name="soc", lb=0, ub=self.s_max)           # st (state of charge, kWh)
         
-        print(f"Created variables for {self.T} time periods including battery variables")
-        print(f"Battery parameters: η_c={self.eta_c}, η_r={self.eta_r}, S_max={self.s_max} kWh")
-        print(f"Charge limits: 0-{self.c_max} kW, Discharge limits: 0-{self.r_max} kW")
+        # Model variables created
         
     def _create_constraints(self):
         """Create all constraints for the optimization model based on the specification."""
@@ -74,17 +80,17 @@ class ConsumerFlexibilityModelQ1c:
         # Constraint (11): Battery dynamics - et = et-1 + η_ch*ct - (1/η_dis)*dt for all t
         self.battery_dynamics = []
         
-        # Initial state (t=0): e0 = e^target + η_ch*c0 - (1/η_dis)*d0
+        # Initial state (t=0): e0 = e^target + η_ch*c0 - d0/η_dis
         self.battery_dynamics.append(
             self.model.addConstr(
-                self.soc[0] == self.s_0 + self.eta_c * self.charge[0] - (1/self.eta_r) * self.discharge[0],
+                self.soc[0] == self.s_0 + self.eta_c * self.charge[0] - self.discharge[0] / self.eta_r,
                 name="battery_dynamics_0"))
         
-        # Subsequent states (t=1 to T-1): et = et-1 + η_ch*ct - (1/η_dis)*dt
+        # Subsequent states (t=1 to T-1): et = et-1 + η_ch*ct - dt/η_dis
         for t in range(1, self.T):
             self.battery_dynamics.append(
                 self.model.addConstr(
-                    self.soc[t] == self.soc[t-1] + self.eta_c * self.charge[t] - (1/self.eta_r) * self.discharge[t],
+                    self.soc[t] == self.soc[t-1] + self.eta_c * self.charge[t] - self.discharge[t] / self.eta_r,
                     name=f"battery_dynamics_{t}"))
         
         # Constraint (12): Battery energy limits - 0 ≤ et ≤ E^max for all t
@@ -131,13 +137,12 @@ class ConsumerFlexibilityModelQ1c:
             (self.export_grid[t] <= self.data['max_export'] for t in range(self.T)), 
             name="export_max")
         
-        print("Created all constraints following the Q1c specification")
-        print(f"Battery boundary: Initial SoC ≥ {self.s_0} kWh, Final SoC = {self.s_T} kWh")
+        # Constraints created
         
     def _set_objective(self):
         """Set the objective function to minimize daily energy procurement cost, discomfort cost, and battery tie-breaker."""
         
-        # Energy procurement costs: Σ[(πt + τ^imp)ut - (πt - τ^exp)xt]
+        # Energy cost: Σ(πt + τt)ut - Σ(πt - τt)xt (from clear formulation)
         import_costs = gp.quicksum(
             (self.data['energy_prices'][t] + self.data['import_tariff']) * self.import_grid[t]
             for t in range(self.T))
@@ -163,9 +168,7 @@ class ConsumerFlexibilityModelQ1c:
         
         self.model.setObjective(total_cost, GRB.MINIMIZE)
         
-        print("Set objective function with energy cost, discomfort cost, and battery tie-breaker")
-        print(f"Discomfort weight: {self.data['discomfort_weight']} DKK/kWh")
-        print(f"Battery tie-breaker epsilon: {self.epsilon}")
+        # Objective function set
         
     def solve(self):
         """
@@ -175,16 +178,11 @@ class ConsumerFlexibilityModelQ1c:
             dict: Dictionary containing optimal solution and key metrics
         """
         
-        print("\nSolving Q1c optimization model...")
-        print("-" * 40)
-        
         # Optimize the model
         self.model.optimize()
         
         # Check solution status
         if self.model.status == GRB.OPTIMAL:
-            print(f"Optimal solution found!")
-            print(f"Objective value: {self.model.objVal:.4f} DKK")
             
             # Extract solution values
             results = self._extract_solution()
@@ -245,18 +243,23 @@ class ConsumerFlexibilityModelQ1c:
         
         # Get dual variables (shadow prices) with error handling
         try:
-            # Use getAttr to safely access dual variables
-            dual_energy = [getattr(self.energy_balance[t], 'pi', 0.0) for t in range(self.T)]
-            dual_deviation = [getattr(self.deviation_balance[t], 'pi', 0.0) for t in range(self.T)]
-            dual_battery = [getattr(self.battery_dynamics[t], 'pi', 0.0) for t in range(self.T)]
-            dual_final_soc = getattr(self.final_soc, 'pi', 0.0)
-        except (AttributeError, Exception):
+            # Extract dual variables using Gurobi's Pi attribute
+            dual_energy = [self.energy_balance[t].Pi for t in range(self.T)]
+            dual_deviation = [self.deviation_balance[t].Pi for t in range(self.T)]
+            dual_battery = [self.battery_dynamics[t].Pi for t in range(self.T)]
+            dual_final_soc = self.final_soc.Pi
+            
+            # Store power balance dual as lambda_t for easy access
+            dual_power_balance = dual_energy
+            
+        except (AttributeError, Exception) as e:
             # Fallback if dual variables not available
             dual_energy = [0.0 for t in range(self.T)]
             dual_deviation = [0.0 for t in range(self.T)]
             dual_battery = [0.0 for t in range(self.T)]
             dual_final_soc = 0.0
-            print("Warning: Dual variables not available, using zeros")
+            dual_power_balance = [0.0 for t in range(self.T)]
+            print(f"Warning: Dual variables not available ({e}), using zeros")
         
         # Calculate summary statistics
         results = {
@@ -306,6 +309,7 @@ class ConsumerFlexibilityModelQ1c:
             'dual_deviation': dual_deviation,
             'dual_battery': dual_battery,
             'dual_final_soc': dual_final_soc,
+            'dual_power_balance': dual_power_balance,  # Lambda_t for power balance constraint
             'avg_dual_energy': np.mean([abs(d) for d in dual_energy]),
             'avg_dual_deviation': np.mean([abs(d) for d in dual_deviation]),
             'avg_dual_battery': np.mean([abs(d) for d in dual_battery]),

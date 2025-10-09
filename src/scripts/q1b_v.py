@@ -61,138 +61,179 @@ def load_system_parameters():
     import_tariff = base_data['bus_params'][0]['import_tariff_DKK/kWh']
     export_tariff = base_data['bus_params'][0]['export_tariff_DKK/kWh']
     
-    print(f"✅ Loaded energy prices: {len(energy_prices)} hourly values")
-    print(f"✅ Import tariff: {import_tariff} DKK/kWh")
-    print(f"✅ Export tariff: {export_tariff} DKK/kWh")
-    
     return {
         'energy_prices': energy_prices,
         'import_tariff': import_tariff,
         'export_tariff': export_tariff
     }
 
-def print_solution_summary(scenario_results, consumer_results, system_params):
-    """Print comprehensive summary of primal and dual variables for all scenarios"""
+def calculate_detailed_metrics_q1b(results, data, scenario_config):
+    """Calculate detailed metrics for Q1b scenarios."""
     
-    print("\n" + "="*80)
-    print("📊 COMPREHENSIVE SOLUTION SUMMARY - Q1.b.v")
-    print("="*80)
+    # Basic totals
+    total_import = sum(results['import_schedule'])
+    total_export = sum(results['export_schedule'])
+    total_pv_available = sum(data['pv_max_hourly'])
+    total_pv_generated = sum(results['pv_schedule'])
+    pv_self_consumed = total_pv_generated - total_export
     
-    # W-Variation Analysis Summary
-    print("\n🔍 PART 1: W-VARIATION ANALYSIS")
-    print("-" * 50)
+    # Cost breakdown components
+    import_energy_cost = sum([(data['energy_prices'][t] + data['import_tariff']) * results['import_schedule'][t] 
+                              for t in range(len(results['import_schedule']))])
+    export_revenue = sum([(data['energy_prices'][t] - data['export_tariff']) * results['export_schedule'][t] 
+                          for t in range(len(results['export_schedule']))])
     
-    for i, scenario in enumerate(scenario_results):
+    # Grid tariffs paid (separate import and export portions)
+    import_tariff_paid = sum([data['import_tariff'] * results['import_schedule'][t] 
+                              for t in range(len(results['import_schedule']))])
+    export_tariff_paid = sum([data['export_tariff'] * results['export_schedule'][t] 
+                              for t in range(len(results['export_schedule']))])
+    total_tariff_paid = import_tariff_paid + export_tariff_paid
+    
+    # Operational switches
+    hours_importing = sum(1 for imp in results['import_schedule'] if imp > 0.01)
+    hours_exporting = sum(1 for exp in results['export_schedule'] if exp > 0.01)
+    hours_curtailing = sum(1 for t in range(len(results['pv_schedule'])) 
+                           if data['pv_max_hourly'][t] - results['pv_schedule'][t] > 0.01)
+    
+    # Peak operations
+    peak_import = max(results['import_schedule']) if results['import_schedule'] else 0
+    peak_export = max(results['export_schedule']) if results['export_schedule'] else 0
+    
+    # Lambda (shadow price) statistics
+    lambda_vals = []
+    if 'dual_energy' in results and results['dual_energy']:
+        lambda_vals = [x for x in results['dual_energy'] if x is not None and abs(x) > 1e-6]
+    
+    lambda_avg = sum(lambda_vals) / len(lambda_vals) if lambda_vals else 0
+    lambda_max = max(lambda_vals) if lambda_vals else 0
+    
+    return {
+        # Cost breakdown
+        'import_energy_cost': import_energy_cost,
+        'export_revenue': export_revenue,
+        'import_tariff_paid': import_tariff_paid,
+        'export_tariff_paid': export_tariff_paid,
+        'total_tariff_paid': total_tariff_paid,
+        'discomfort_cost': scenario_config['w'] * (results['total_dev_plus'] + results['total_dev_minus']),
+        'total_cost': import_energy_cost - export_revenue + scenario_config['w'] * (results['total_dev_plus'] + results['total_dev_minus']),
+        
+        # Operational metrics
+        'hours_importing': hours_importing,
+        'hours_exporting': hours_exporting,
+        'hours_curtailing': hours_curtailing,
+        'peak_import': peak_import,
+        'peak_export': peak_export,
+        
+        # Shadow prices
+        'lambda_avg': lambda_avg,
+        'lambda_max': lambda_max,
+        
+        # Basic metrics
+        'total_import': total_import,
+        'total_export': total_export,
+        'pv_self_consumed': pv_self_consumed,
+        'pv_available': total_pv_available,
+        'pv_generated': total_pv_generated
+    }
+
+
+def print_detailed_scenario_summary_q1b(scenario_name, results, data, scenario_config, metrics):
+    """Print detailed scenario summary for Q1b (no battery metrics)."""
+    
+    print(f"\n{'='*80}")
+    print(f"DETAILED ANALYSIS - SCENARIO {scenario_name}")
+    print(f"{'='*80}")
+    
+    # Cost breakdown
+    print(f"\nCOST BREAKDOWN:")
+    print(f"  Import energy cost:     {metrics['import_energy_cost']:.2f} DKK")
+    print(f"  Export revenue:         {metrics['export_revenue']:.2f} DKK")
+    print(f"  Grid tariffs paid:")
+    print(f"    - Import tariffs:     {metrics['import_tariff_paid']:.2f} DKK")
+    print(f"    - Export tariffs:     {metrics['export_tariff_paid']:.2f} DKK")
+    print(f"    - Total tariffs:      {metrics['total_tariff_paid']:.2f} DKK")
+    print(f"  Discomfort cost:        {metrics['discomfort_cost']:.2f} DKK")
+    print(f"  NET TOTAL COST:         {metrics['total_cost']:.2f} DKK")
+    
+    # Operational patterns
+    print(f"\nOPERATIONAL PATTERNS:")
+    print(f"  Hours importing:         {metrics['hours_importing']}")
+    print(f"  Hours exporting:         {metrics['hours_exporting']}")
+    print(f"  Hours curtailing PV:     {metrics['hours_curtailing']}")
+    print(f"  Peak operations:")
+    print(f"    - Peak import:         {metrics['peak_import']:.2f} kW")
+    print(f"    - Peak export:         {metrics['peak_export']:.2f} kW")
+    
+    # Shadow price summary
+    print(f"\nSHADOW PRICE SUMMARY:")
+    print(f"  Average λₜ:              {metrics['lambda_avg']:.3f} DKK/kWh")
+    print(f"  Maximum λₜ:              {metrics['lambda_max']:.3f} DKK/kWh")
+
+
+def print_comprehensive_summary_table(w_results, consumer_results):
+    """Print a comprehensive summary table matching Q1c_v style."""
+    
+    print(f"\n{'='*100}")
+    print("COMPREHENSIVE SUMMARY TABLE")
+    print(f"{'='*100}")
+    
+    # Header
+    print(f"{'Scenario':<20} {'w':<5} {'Cost':<8} {'Import':<8} {'Export':<8} {'PV Self':<8} {'Discomf':<8} {'H_imp':<6} {'H_exp':<6} {'λ_avg':<8} {'λ_max':<8}")
+    print(f"{'':20} {'':5} {'(DKK)':<8} {'(kWh)':<8} {'(kWh)':<8} {'(kWh)':<8} {'(DKK)':<8} {'':6} {'':6} {'(DKK/kWh)':<8} {'(DKK/kWh)':<8}")
+    print("-" * 100)
+    
+    # W-variation scenarios
+    for scenario in w_results:
+        name = f"w={scenario['weight']}"
         results = scenario['results']
-        w = scenario['weight']
+        metrics = scenario.get('metrics', {})
         
-        print(f"\n📈 Scenario {i+1}: w = {w} DKK/kWh")
-        print(f"   Total Cost: {results['optimal_cost']:.2f} DKK")
-        print(f"   Energy Cost: {results['energy_cost']:.2f} DKK")
-        print(f"   Discomfort Cost: {results['discomfort_penalty']:.2f} DKK")
+        cost = results['optimal_cost']
+        import_kwh = sum(results['import_schedule'])
+        export_kwh = sum(results['export_schedule'])
+        pv_self = sum(results['pv_schedule']) - export_kwh
+        discomf = results['discomfort_penalty']
+        h_imp = metrics.get('hours_importing', 0)
+        h_exp = metrics.get('hours_exporting', 0)
+        lambda_avg = metrics.get('lambda_avg', 0)
+        lambda_max = metrics.get('lambda_max', 0)
         
-        # Key Primal Variables
-        print("   🔵 Key Primal Variables:")
-        print(f"     • Total Load: {results['total_energy_consumed']:.1f} kWh")
-        print(f"     • Grid Import: {results['total_imported']:.1f} kWh")
-        print(f"     • Grid Export: {results['total_exported']:.1f} kWh")
-        print(f"     • Over-consumption: {results['total_dev_plus']:.1f} kWh")
-        print(f"     • Under-consumption: {results['total_dev_minus']:.1f} kWh")
-        
-        # Key Dual Variables (Shadow Prices)
-        print("   🔴 Key Dual Variables (Shadow Prices):")
-        print(f"     • Avg Energy Balance Dual: {results['avg_dual_energy']:.3f} DKK/kWh")
-        print(f"     • Avg Deviation Balance Dual: {results['avg_dual_deviation']:.3f} DKK/kWh")
-        print(f"     • Peak Import Dual: {results['peak_dual_import']:.3f} DKK/kWh")
-        print(f"     • Peak Export Dual: {results['peak_dual_export']:.3f} DKK/kWh")
-        
-        # Flexibility Metrics
-        ref_total = sum(results['reference_load'])
-        flexibility_used = (results['total_dev_plus'] + results['total_dev_minus'])
-        flexibility_pct = (flexibility_used / ref_total) * 100
-        print(f"   📊 Flexibility: {flexibility_pct:.1f}% of reference load utilized")
-        
-        # Profit Analysis (negative cost = profit from grid arbitrage)
-        if results['energy_cost'] < 0:
-            profit = -results['energy_cost']
-            print(f"   💰 Grid Arbitrage Profit: {profit:.2f} DKK")
+        print(f"{name:<20} {scenario['weight']:<5.1f} {cost:<8.2f} {import_kwh:<8.2f} {export_kwh:<8.2f} {pv_self:<8.2f} {discomf:<8.2f} {h_imp:<6} {h_exp:<6} {lambda_avg:<8.3f} {lambda_max:<8.3f}")
     
-    # Consumer Profile Analysis Summary
-    print(f"\n🔍 PART 2: CONSUMER PROFILE ANALYSIS")
-    print("-" * 50)
+    print("-" * 100)
     
-    for i, consumer in enumerate(consumer_results):
+    # Consumer scenarios
+    for consumer in consumer_results:
+        name = consumer['name'][:18]
         results = consumer['results']
-        name = consumer['name']
+        metrics = consumer.get('metrics', {})
         
-        print(f"\n👤 Consumer {i+1}: {name}")
-        print(f"   Total Cost: {results['optimal_cost']:.2f} DKK")
-        print(f"   Energy Cost: {results['energy_cost']:.2f} DKK")
-        print(f"   Discomfort Cost: {results['discomfort_penalty']:.2f} DKK")
+        cost = results['optimal_cost']
+        import_kwh = sum(results['import_schedule'])
+        export_kwh = sum(results['export_schedule'])
+        pv_self = sum(results['pv_schedule']) - export_kwh
+        discomf = results['discomfort_penalty']
+        h_imp = metrics.get('hours_importing', 0)
+        h_exp = metrics.get('hours_exporting', 0)
+        lambda_avg = metrics.get('lambda_avg', 0)
+        lambda_max = metrics.get('lambda_max', 0)
         
-        # Key Primal Variables
-        print("   🔵 Key Primal Variables:")
-        print(f"     • Total Load: {results['total_energy_consumed']:.1f} kWh")
-        print(f"     • Grid Import: {results['total_imported']:.1f} kWh") 
-        print(f"     • Grid Export: {results['total_exported']:.1f} kWh")
-        print(f"     • Over-consumption: {results['total_dev_plus']:.1f} kWh")
-        print(f"     • Under-consumption: {results['total_dev_minus']:.1f} kWh")
-        
-        # Key Dual Variables
-        print("   🔴 Key Dual Variables (Shadow Prices):")
-        print(f"     • Avg Energy Balance Dual: {results['avg_dual_energy']:.3f} DKK/kWh")
-        print(f"     • Avg Deviation Balance Dual: {results['avg_dual_deviation']:.3f} DKK/kWh")
-        
-        # Flexibility and Profit Analysis
-        ref_total = sum(results['reference_load'])
-        flexibility_used = (results['total_dev_plus'] + results['total_dev_minus'])
-        flexibility_pct = (flexibility_used / ref_total) * 100
-        print(f"   📊 Flexibility: {flexibility_pct:.1f}% of reference load utilized")
-        
-        if results['energy_cost'] < 0:
-            profit = -results['energy_cost']
-            print(f"   💰 Grid Arbitrage Profit: {profit:.2f} DKK")
+        print(f"{name:<20} {consumer['weight']:<5.1f} {cost:<8.2f} {import_kwh:<8.2f} {export_kwh:<8.2f} {pv_self:<8.2f} {discomf:<8.2f} {h_imp:<6} {h_exp:<6} {lambda_avg:<8.3f} {lambda_max:<8.3f}")
     
-    # Comparative Analysis
-    print(f"\n🔍 COMPARATIVE INSIGHTS")
-    print("-" * 50)
+    print("=" * 100)
+
+
+def print_solution_summary(scenario_results, consumer_results, system_params):
+    """Print comprehensive summary matching Q1c_v style."""
     
-    # W-variation insights
-    w_costs = [s['results']['optimal_cost'] for s in scenario_results]
-    w_flexibility = []
-    for s in scenario_results:
-        r = s['results']
-        ref_total = sum(r['reference_load'])
-        flex_used = r['total_dev_plus'] + r['total_dev_minus']
-        w_flexibility.append((flex_used / ref_total) * 100)
+    print("QUESTION 1b PART V - SCENARIO ANALYSIS")
+    print("=" * 50)
     
-    print("📈 W-Variation Impact:")
-    print(f"   • Cost Range: {min(w_costs):.2f} - {max(w_costs):.2f} DKK")
-    print(f"   • Flexibility Range: {min(w_flexibility):.1f}% - {max(w_flexibility):.1f}%")
-    print(f"   • Trend: Higher w → Lower flexibility, Higher total cost")
+    # Print comprehensive summary table
+    print_comprehensive_summary_table(scenario_results, consumer_results)
     
-    # Consumer insights
-    consumer_costs = [c['results']['optimal_cost'] for c in consumer_results]
-    consumer_names = [c['name'] for c in consumer_results]
-    
-    print("👥 Consumer Profile Impact:")
-    print(f"   • Cost Range: {min(consumer_costs):.2f} - {max(consumer_costs):.2f} DKK")
-    
-    # Find most/least flexible consumers
-    consumer_flex = []
-    for c in consumer_results:
-        r = c['results']
-        ref_total = sum(r['reference_load'])
-        flex_used = r['total_dev_plus'] + r['total_dev_minus']
-        consumer_flex.append((flex_used / ref_total) * 100)
-    
-    most_flexible_idx = consumer_flex.index(max(consumer_flex))
-    least_flexible_idx = consumer_flex.index(min(consumer_flex))
-    
-    print(f"   • Most Flexible: {consumer_names[most_flexible_idx]} ({consumer_flex[most_flexible_idx]:.1f}%)")
-    print(f"   • Least Flexible: {consumer_names[least_flexible_idx]} ({consumer_flex[least_flexible_idx]:.1f}%)")
-    
-    print("="*80)
+    print("\nANALYSIS COMPLETE")
 
 def get_consumer_configurations():
     """Define consumer load profiles based on realistic usage patterns"""
@@ -223,15 +264,12 @@ def get_consumer_configurations():
         }
     ]
     
-    print(f"✅ Loaded {len(consumer_configs)} consumer configurations")
-    for config in consumer_configs:
-        print(f"   - {config['name']}: {config['description']}")
-    
     return consumer_configs
 
 def solve_w_variation_scenarios():
     """Solve the 4 w-variation scenarios: 0.5, 1.5, 2.5, 5.0"""
-    print("🔄 Starting W-Variation Analysis (4 scenarios)...")
+    print("QUESTION 1b PART V - W-VARIATION ANALYSIS")
+    print("=" * 50)
     
     # Load data
     project_root = Path(__file__).parent.parent.parent
@@ -244,8 +282,11 @@ def solve_w_variation_scenarios():
     w_values = [0.5, 1.5, 2.5, 5.0]
     scenario_results = []
     
+    print(f"\nSolving {len(w_values)} scenarios...")
+    print("-" * 50)
+    
     for w in w_values:
-        print(f"\n📊 Solving for w = {w} DKK/kWh...")
+        print(f"\nProcessing w = {w}...")
         
         # Process data for this w value
         optimization_data = processor.process_for_optimization_q1b(
@@ -257,6 +298,9 @@ def solve_w_variation_scenarios():
         results = model.solve()
         
         if results:
+            # Calculate detailed metrics
+            metrics = calculate_detailed_metrics_q1b(results, optimization_data, {'w': w})
+            
             # Calculate flexibility percentage
             reference_sum = sum(results['reference_load'])
             deviation_sum = sum(abs(actual - ref) for actual, ref in 
@@ -267,38 +311,15 @@ def solve_w_variation_scenarios():
                 'name': f'w = {w}',
                 'weight': w,
                 'results': results,
-                'flexibility_pct': flexibility_pct
+                'flexibility_pct': flexibility_pct,
+                'metrics': metrics
             })
             
-            print(f"✅ Solution found: Total Cost = {results['optimal_cost']:.2f} DKK")
-            print(f"   Energy Cost = {results['energy_cost']:.2f} DKK")
-            print(f"   Discomfort Cost = {results['discomfort_penalty']:.2f} DKK")
-            print(f"   Flexibility = {flexibility_pct:.1f}%")
+            # Print detailed summary
+            print_detailed_scenario_summary_q1b(f"w = {w}", results, optimization_data, {'w': w}, metrics)
             
-            # Detailed Primal and Dual Variable Reporting
-            print(f"\n🔵 PRIMAL VARIABLES (w = {w} DKK/kWh):")
-            print(f"   • Total Load: {results['total_energy_consumed']:.2f} kWh")
-            print(f"   • Grid Import: {results['total_imported']:.2f} kWh")
-            print(f"   • Grid Export: {results['total_exported']:.2f} kWh")
-            print(f"   • PV Used: {results['total_pv_used']:.2f} kWh")
-            print(f"   • Over-consumption: {results['total_dev_plus']:.2f} kWh")
-            print(f"   • Under-consumption: {results['total_dev_minus']:.2f} kWh")
-            
-            print(f"\n🔴 DUAL VARIABLES (Shadow Prices, w = {w} DKK/kWh):")
-            print(f"   • Avg Energy Balance Dual: {results['avg_dual_energy']:.4f} DKK/kWh")
-            print(f"   • Avg Deviation Balance Dual: {results['avg_dual_deviation']:.4f} DKK/kWh")
-            print(f"   • Peak Import Dual: {results['peak_dual_import']:.4f} DKK/kWh")
-            print(f"   • Peak Export Dual: {results['peak_dual_export']:.4f} DKK/kWh")
-            
-            # Economic interpretation
-            if results['avg_dual_energy'] != 0:
-                print(f"   📊 Energy Balance: Shadow price = {results['avg_dual_energy']:.4f}")
-                print(f"      → Marginal value of relaxing energy balance constraints")
-            if results['avg_dual_deviation'] != 0:
-                print(f"   📊 Deviation Balance: Shadow price = {results['avg_dual_deviation']:.4f}")
-                print(f"      → Marginal cost of allowing more flexibility deviations")
         else:
-            print(f"❌ No solution found for w = {w}")
+            print(f"Scenario w = {w}: FAILED to solve")
     
     return scenario_results
 
@@ -306,19 +327,15 @@ def create_w_variation_plots(scenario_results, system_params):
     """Create the 4 plots for w-variation analysis"""
     
     # Plot 1: Load profiles comparison with energy prices
-    print("📊 Creating Plot 1: Load Profiles with Energy Prices...")
     create_load_profiles_comparison(scenario_results, system_params)
     
     # Plot 2: Cost breakdown
-    print("📊 Creating Plot 2: Cost Breakdown...")
     create_cost_breakdown_analysis(scenario_results, system_params)
     
     # Plot 3: Daily energy balance summary
-    print("📊 Creating Plot 3: Daily Energy Balance Summary...")
     create_energy_balance_summary(scenario_results, system_params)
     
     # Plot 4: Consumer under-consumption patterns
-    print("📊 Creating Plot 4: Under-Consumption Patterns...")
     create_under_consumption_patterns(scenario_results, system_params)
 
 def create_load_profiles_comparison(scenario_results, system_params):
@@ -500,7 +517,8 @@ def create_under_consumption_patterns(scenario_results, system_params):
 
 def solve_consumer_load_scenarios():
     """Solve the 4 consumer load profile scenarios at w=1.5"""
-    print("\n🔄 Starting Consumer Load Profile Analysis (4 consumer types)...")
+    print("\nQUESTION 1b PART V - CONSUMER PROFILE ANALYSIS")
+    print("=" * 50)
     
     # Load data
     project_root = Path(__file__).parent.parent.parent
@@ -513,10 +531,13 @@ def solve_consumer_load_scenarios():
     # Load consumer configurations
     consumer_configs = get_consumer_configurations()
     
+    print(f"\nSolving {len(consumer_configs)} consumer scenarios...")
+    print("-" * 50)
+    
     for consumer_config in consumer_configs:
         consumer_type = consumer_config['name']
         load_multipliers = consumer_config['load_multipliers']
-        print(f"\n👤 Analyzing {consumer_type}...")
+        print(f"\nProcessing {consumer_type}...")
         
         try:
             # Load base data
@@ -538,6 +559,9 @@ def solve_consumer_load_scenarios():
             results = model.solve()
             
             if results:
+                # Calculate detailed metrics
+                metrics = calculate_detailed_metrics_q1b(results, optimization_data, {'w': fixed_w})
+                
                 # Calculate flexibility metrics
                 reference_sum = sum(results['reference_load'])
                 deviation_sum = sum(abs(actual - ref) for actual, ref in 
@@ -548,30 +572,15 @@ def solve_consumer_load_scenarios():
                     'name': consumer_type,
                     'weight': fixed_w,
                     'results': results,
-                    'flexibility_pct': flexibility_pct
+                    'flexibility_pct': flexibility_pct,
+                    'metrics': metrics
                 })
                 
-                print(f"   Solution found: Total Cost = {results['optimal_cost']:.2f} DKK")
-                print(f"   Energy Cost = {results['energy_cost']:.2f} DKK")
-                print(f"   Discomfort Cost = {results['discomfort_penalty']:.2f} DKK")
-                print(f"   Flexibility = {flexibility_pct:.1f}%")
+                # Print detailed summary
+                print_detailed_scenario_summary_q1b(consumer_type, results, optimization_data, {'w': fixed_w}, metrics)
                 
-                # Detailed Primal and Dual Variable Reporting for Consumer
-                print(f"\n🔵 PRIMAL VARIABLES ({consumer_type}):")
-                print(f"   • Total Load: {results['total_energy_consumed']:.2f} kWh")
-                print(f"   • Grid Import: {results['total_imported']:.2f} kWh")
-                print(f"   • Grid Export: {results['total_exported']:.2f} kWh")
-                print(f"   • PV Used: {results['total_pv_used']:.2f} kWh")
-                print(f"   • Over-consumption: {results['total_dev_plus']:.2f} kWh")
-                print(f"   • Under-consumption: {results['total_dev_minus']:.2f} kWh")
-                
-                print(f"\n🔴 DUAL VARIABLES ({consumer_type}):")
-                print(f"   • Avg Energy Balance Dual: {results['avg_dual_energy']:.4f} DKK/kWh")
-                print(f"   • Avg Deviation Balance Dual: {results['avg_dual_deviation']:.4f} DKK/kWh")
-                print(f"   • Peak Import Dual: {results['peak_dual_import']:.4f} DKK/kWh")
-                print(f"   • Peak Export Dual: {results['peak_dual_export']:.4f} DKK/kWh")
             else:
-                print(f"No solution found for {consumer_type}")
+                print(f"Consumer {consumer_type}: FAILED to solve")
                 
         except Exception as e:
             print(f"Error processing {consumer_type}: {e}")
@@ -583,11 +592,9 @@ def create_consumer_load_plots(consumer_results, system_params):
     
     # Create 4 individual consumer plots
     for i, consumer in enumerate(consumer_results):
-        print(f"📊 Creating Consumer Plot {i+1}: {consumer['name']}...")
         create_individual_consumer_plot(consumer, i+1, system_params)
     
     # Create combined cost breakdown
-    print("📊 Creating Consumer Cost Breakdown...")
     create_consumer_cost_breakdown(consumer_results, system_params)
 
 def create_individual_consumer_plot(consumer, plot_num, system_params):
@@ -685,50 +692,48 @@ def create_consumer_cost_breakdown(consumer_results, system_params):
 
 def main():
     """Main execution function"""
-    print(" Q1b.v - Final Analysis: Exactly What You Want!")
-    print("=" * 60)
+    print("Q1(v) SCENARIO ANALYSIS")
+    print("=" * 80)
+    print("QUESTION 1b PART V - SCENARIO ANALYSIS: FLEXIBILITY & COST STRUCTURE")
+    print("=" * 80)
     
     try:
         # Load system parameters from data files
-        print("🔧 Loading System Parameters...")
         system_params = load_system_parameters()
         
         # PART 1: W-Variation Analysis (4 scenarios, 4 plots)
-        print("\nPART 1: W-Variation Analysis")
-        print("-" * 40)
         w_results = solve_w_variation_scenarios()
         
         if w_results:
             create_w_variation_plots(w_results, system_params)
-            print("✅ Part 1 Complete: 4 W-variation plots created!")
         
         # PART 2: Consumer Load Profile Analysis (4 consumers, 5 plots)
-        print("\nPART 2: Consumer Load Profile Analysis")
-        print("-" * 40)
         consumer_results = solve_consumer_load_scenarios()
         
         if consumer_results:
             create_consumer_load_plots(consumer_results, system_params)
-            print("✅ Part 2 Complete: 5 Consumer profile plots created!")
+        
+        # Generate visualizations
+        print("\nGenerating plots...")
+        print("Plots completed.")
         
         # Print comprehensive solution summary
+        print("\n" + "=" * 80)
+        print("Q1(v) SCENARIO ANALYSIS RESULTS")
+        print("=" * 80)
+        
         print_solution_summary(w_results, consumer_results, system_params)
         
-        print("\n" + "=" * 60)
-        print("🎉 ANALYSIS COMPLETE!")
-        print("=" * 60)
-        print(" Total Plots Generated: 9")
-        print("   PART 1 (W-variation): 4 plots")
-        print("     - Load profiles comparison")
-        print("     - Cost breakdown analysis")
-        print("     - Energy balance summary")
-        print("     - Under-consumption patterns")
-        print("   PART 2 (Consumer types): 5 plots")
-        print("     - 4 individual consumer plots")
-        print("     - 1 consumer cost breakdown")
+        print("\nVISUALIZATIONS GENERATED:")
+        print("1. Load profiles comparison with energy prices")
+        print("2. Cost breakdown analysis")
+        print("3. Energy balance summary")
+        print("4. Under-consumption patterns")
+        print("5. Individual consumer profiles (4 plots)")
+        print("6. Consumer cost breakdown")
         
     except Exception as e:
-        print(f"Error in main execution: {e}")
+        print(f"ERROR in Q1b scenario analysis: {e}")
         import traceback
         traceback.print_exc()
 

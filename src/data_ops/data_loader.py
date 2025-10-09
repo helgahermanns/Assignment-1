@@ -57,9 +57,9 @@ class DataLoader:
             try:
                 with open(file_path, 'r') as f:
                     data[file_key] = json.load(f)
-                print(f"✓ Loaded {file_key}.json")
+                print(f"+ Loaded {file_key}.json")
             except Exception as e:
-                print(f"✗ Error loading {file_path}: {e}")
+                print(f"- Error loading {file_path}: {e}")
         
         # Load CSV files (if any)
         for file_path in question_path.glob("*.csv"):
@@ -67,9 +67,9 @@ class DataLoader:
             
             try:
                 data[file_key] = pd.read_csv(file_path)
-                print(f"✓ Loaded {file_key}.csv")
+                print(f"+ Loaded {file_key}.csv")
             except Exception as e:
-                print(f"✗ Error loading {file_path}: {e}")
+                print(f"- Error loading {file_path}: {e}")
                 
         return data
 

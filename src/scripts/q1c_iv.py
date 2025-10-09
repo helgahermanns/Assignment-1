@@ -49,17 +49,19 @@ def solve_q1c_iv():
         project_root = Path(__file__).parent.parent.parent
         loader = DataLoader(base_path=str(project_root / "data"))
         
-        # Use Q1b data as base and add battery-specific processing
-        base_raw_data = loader.load_data("question_1b")
+        # Use Q1c data which includes battery storage parameters
+        base_raw_data = loader.load_data("question_1c")
         
         processor = DataProcessor()
         
         # Set discomfort weight for Q1c (same as Q1b baseline)
-        w_value = 1.5  # DKK/kWh - good balance between cost and flexibility
+        w_value = 2.5  # DKK/kWh - good balance between cost and flexibility
         
-        # Process data for optimization
-        optimization_data = processor.process_for_optimization_q1b(
-            copy.deepcopy(base_raw_data), w_value
+        # Process data for optimization using unified processor for Q1c
+        optimization_data = processor.process_for_optimization_unified(
+            copy.deepcopy(base_raw_data), 
+            question_type='q1c',
+            discomfort_weight=w_value
         )
         
         print(f"✅ Data loaded and processed successfully")
@@ -217,7 +219,7 @@ def create_energy_sources_and_battery_plot(results, data):
     ax2.set_xlim(0.5, 24.5)
     ax2.set_xticks(range(1, 25, 2))
     ax2.grid(True, alpha=0.3)
-    ax2.set_ylim(-2.0, 3.5)
+    ax2.set_ylim(-2.0, 4)
     ax2.legend(loc='upper right', fontsize=12)
     
     plt.tight_layout()
@@ -892,23 +894,24 @@ def create_figure4_impact_summary(results, data):
     plt.close()
     
     plt.rcParams.update(original_rc)
-    print("✅ Figure 4: Impact Summary saved")
 
 
 def create_4_report_figures():
     """Create the 4 specific report figures with bold formatting"""
-    print("\n🎯 Creating 4 Individual Report Figures...")
-    print("=" * 60)
     
     try:
         # Load and solve Q1c
         project_root = Path(__file__).parent.parent.parent
         data_loader = DataLoader(base_path=str(project_root / "data"))
-        data = data_loader.load_data("question_1b")
+        data = data_loader.load_data("question_1c")
         
         processor = DataProcessor()
         w_value = 1.5  # DKK/kWh
-        processed_data = processor.process_for_optimization_q1b(copy.deepcopy(data), w_value)
+        processed_data = processor.process_for_optimization_unified(
+            copy.deepcopy(data), 
+            question_type='q1c',
+            discomfort_weight=w_value
+        )
         
         model = ConsumerFlexibilityModelQ1c(processed_data)
         results = model.solve()
@@ -921,18 +924,11 @@ def create_4_report_figures():
             create_figure3_load_profile_comparison(results, processed_data, hours)
             create_figure4_impact_summary(results, processed_data)
             
-            print("\n✅ All 4 Report Figures completed successfully!")
-            print("   Figures saved with bold formatting and large legends:")
-            print("   • Q1c_Figure1_Hourly_Energy_Flows.png")
-            print("   • Q1c_Figure2_Battery_SoC_Profile.png") 
-            print("   • Q1c_Figure3_Load_Profile_Comparison.png")
-            print("   • Q1c_Figure4_Impact_Summary.png")
-            
         else:
-            print("❌ Failed to solve Q1c model")
+            print("Failed to solve Q1c model")
             
     except Exception as e:
-        print(f"❌ Error creating report figures: {e}")
+        print(f"Error creating report figures: {e}")
         import traceback
         traceback.print_exc()
 
