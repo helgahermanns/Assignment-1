@@ -1,0 +1,42 @@
+[
+    {"consumer_ID": "C1_Tech",
+    "grid_preferences": null,
+    "DER_preferences": null,
+    "load_preferences":[
+        {
+            "load_id": "FFL_01",
+            "min_total_energy_per_day_hour_equivalent": null,
+            "max_total_energy_per_day_hour_equivalent": null,
+            "consumer_type": "Tech Enthusiast",
+            "description": "Smart home automation, highly shiftable loads, night-weighted consumption",
+            "hourly_profile_ratio": [
+                0.080,
+                0.065,
+                0.055,
+                0.045,
+                0.040,
+                0.120,
+                0.350,
+                0.450,
+                0.320,
+                0.180,
+                0.220,
+                0.280,
+                0.250,
+                0.240,
+                0.300,
+                0.420,
+                0.480,
+                0.550,
+                0.650,
+                0.580,
+                0.480,
+                0.350,
+                0.220,
+                0.120
+            ]
+        }
+    ],
+    "storage_preferences": null,
+    "heat_pump_preferences": null}
+]

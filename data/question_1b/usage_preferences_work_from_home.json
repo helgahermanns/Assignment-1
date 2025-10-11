@@ -1,0 +1,42 @@
+[
+    {"consumer_ID": "C1_WFH",
+    "grid_preferences": null,
+    "DER_preferences": null,
+    "load_preferences":[
+        {
+            "load_id": "FFL_01",
+            "min_total_energy_per_day_hour_equivalent": null,
+            "max_total_energy_per_day_hour_equivalent": null,
+            "consumer_type": "Work From Home Professional",
+            "description": "High daytime consumption due to home office, flexible meal/activity times",
+            "hourly_profile_ratio": [
+                0.045,
+                0.035,
+                0.035,
+                0.035,
+                0.050,
+                0.180,
+                0.420,
+                0.680,
+                0.850,
+                0.900,
+                0.950,
+                0.980,
+                0.920,
+                0.850,
+                0.780,
+                0.650,
+                0.520,
+                0.480,
+                0.420,
+                0.380,
+                0.320,
+                0.180,
+                0.120,
+                0.070
+            ]
+        }
+    ],
+    "storage_preferences": null,
+    "heat_pump_preferences": null}
+]

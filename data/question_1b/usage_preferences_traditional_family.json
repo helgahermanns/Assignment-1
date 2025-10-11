@@ -1,0 +1,42 @@
+[
+    {"consumer_ID": "C1_Family",
+    "grid_preferences": null,
+    "DER_preferences": null,
+    "load_preferences":[
+        {
+            "load_id": "FFL_01",
+            "min_total_energy_per_day_hour_equivalent": null,
+            "max_total_energy_per_day_hour_equivalent": null,
+            "consumer_type": "Traditional Family",
+            "description": "Standard evening peak pattern, work schedule 9-17, dinner and activities 17-20",
+            "hourly_profile_ratio": [
+                0.055,
+                0.040,
+                0.040,
+                0.040,
+                0.075,
+                0.480,
+                0.760,
+                0.800,
+                0.630,
+                0.220,
+                0.250,
+                0.350,
+                0.300,
+                0.280,
+                0.450,
+                0.650,
+                0.780,
+                0.900,
+                0.980,
+                0.880,
+                0.650,
+                0.380,
+                0.220,
+                0.120
+            ]
+        }
+    ],
+    "storage_preferences": null,
+    "heat_pump_preferences": null}
+]
