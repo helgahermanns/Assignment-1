@@ -381,8 +381,8 @@ def create_separate_q1v_plots(all_results, output_dir):
         'xtick.labelsize': 12,
         'ytick.labelsize': 12,
         'axes.titlesize': 16,
-        'axes.labelsize': 14,
-        'legend.fontsize': 12
+        'axes.labelsize': 16,
+        'legend.fontsize': 16
     })
     
     scenarios = list(all_results.keys())
@@ -401,8 +401,8 @@ def create_separate_q1v_plots(all_results, output_dir):
     bars1 = ax1.bar(scenario_names, costs, color=colors, alpha=0.8, edgecolor='black', linewidth=2)
     ax1.set_ylabel('Total Daily Cost (DKK)', fontsize=16, fontweight='bold')
     ax1.set_title('Total Daily Cost by Scenario', fontsize=18, fontweight='bold', pad=25)
-    ax1.tick_params(axis='x', rotation=45, labelsize=14)
-    ax1.tick_params(axis='y', labelsize=14)
+    ax1.tick_params(axis='x', rotation=45, labelsize=16)
+    ax1.tick_params(axis='y', labelsize=16)
     ax1.grid(True, alpha=0.3, linewidth=1)
     
     # Add value labels on bars
@@ -425,20 +425,20 @@ def create_separate_q1v_plots(all_results, output_dir):
     ax2.set_ylabel('Energy (kWh)', fontsize=16, fontweight='bold')
     ax2.set_title('Import vs Export by Scenario', fontsize=18, fontweight='bold', pad=25)
     ax2.set_xticks(x_pos)
-    ax2.set_xticklabels(scenario_names, rotation=45, fontsize=14)
-    ax2.tick_params(axis='y', labelsize=14)
-    ax2.legend(fontsize=14, loc='upper right')
+    ax2.set_xticklabels(scenario_names, rotation=45, fontsize=16)
+    ax2.tick_params(axis='y', labelsize=16)
+    ax2.legend(fontsize=16, loc='upper right')
     ax2.grid(True, alpha=0.3, linewidth=1)
     
     # Add value labels
     for bar, val in zip(bars_import, imports):
         ax2.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.2, 
-                f'{val:.1f}', ha='center', va='bottom', fontweight='bold', fontsize=12)
+                f'{val:.1f}', ha='center', va='bottom', fontweight='bold', fontsize=18)
     for bar, val in zip(bars_export, exports):
         if val > 0.1:  # Only show label if export is significant
             ax2.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.1, 
-                    f'{val:.1f}', ha='center', va='bottom', fontweight='bold', fontsize=12)
-    
+                    f'{val:.1f}', ha='center', va='bottom', fontweight='bold', fontsize=18)
+
     plt.tight_layout()
     plt.savefig(output_dir / 'Q1av_Import_Export.png', dpi=300, bbox_inches='tight')
     plt.show()
@@ -450,8 +450,8 @@ def create_separate_q1v_plots(all_results, output_dir):
     bars3 = ax3.bar(scenario_names, cost_diffs, color=colors_impact, alpha=0.8, edgecolor='black', linewidth=2)
     ax3.set_ylabel('Cost Difference from Base (DKK)', fontsize=16, fontweight='bold')
     ax3.set_title('Cost Impact vs Base Case', fontsize=18, fontweight='bold', pad=25)
-    ax3.tick_params(axis='x', rotation=45, labelsize=14)
-    ax3.tick_params(axis='y', labelsize=14)
+    ax3.tick_params(axis='x', rotation=45, labelsize=16)
+    ax3.tick_params(axis='y', labelsize=16)
     ax3.axhline(y=0, color='black', linestyle='-', alpha=0.8, linewidth=3)
     ax3.grid(True, alpha=0.3, linewidth=1)
     
@@ -474,10 +474,10 @@ def create_tariff_focused_comparison(all_results, output_dir):
     plt.rcParams.update({
         'font.size': 14,
         'axes.titlesize': 18,
-        'axes.labelsize': 16,
-        'xtick.labelsize': 14,
-        'ytick.labelsize': 14,
-        'legend.fontsize': 14
+        'axes.labelsize': 18,
+        'xtick.labelsize': 18,
+        'ytick.labelsize': 18,
+        'legend.fontsize': 18
     })
     
     fig, ax = plt.subplots(figsize=(16, 12))
@@ -531,26 +531,26 @@ def create_tariff_focused_comparison(all_results, output_dir):
                      color='dimgray', linewidth=2.5, alpha=0.6, 
                      linestyle=':', where='mid', zorder=2)
     
-    ax.set_xlabel('Hour', fontsize=16, fontweight='bold')
-    ax.set_ylabel('Load (kW)', fontsize=16, fontweight='bold')
+    ax.set_xlabel('Hour', fontsize=18, fontweight='bold')
+    ax.set_ylabel('Load (kW)', fontsize=18, fontweight='bold')
     ax.set_title('Import/Export Tariff Impact on Consumer Flexibility', fontsize=18, fontweight='bold', pad=25)
     ax.set_xlim(0.5, 24.5)
     ax.set_ylim(-0.1, 3.2)
     ax.grid(True, alpha=0.3, linewidth=1)
-    ax.tick_params(axis='both', labelsize=14)
+    ax.tick_params(axis='both', labelsize=18)
     
     # Configure price axis
-    ax_price.set_ylabel('Energy Price (DKK/kWh)', fontsize=14, color='dimgray', fontweight='bold')
-    ax_price.tick_params(axis='y', labelcolor='dimgray', labelsize=12)
+    ax_price.set_ylabel('Energy Price (DKK/kWh)', fontsize=18, color='dimgray', fontweight='bold')
+    ax_price.tick_params(axis='y', labelcolor='dimgray', labelsize=16)
     ax_price.set_ylim(0.8, 2.6)
     
     # Create legends with enhanced styling
-    load_legend = ax.legend(fontsize=14, loc='upper left',
-                           title='Load Schedules', title_fontsize=16, 
+    load_legend = ax.legend(fontsize=18, loc='upper left',
+                           title='Load Schedules', title_fontsize=18, 
                            framealpha=0.95)
-    
-    price_legend = ax_price.legend(['Base Energy Prices'], fontsize=12, loc='lower right', 
-                                  title='Energy Prices', title_fontsize=14, 
+
+    price_legend = ax_price.legend(['Base Energy Prices'], fontsize=18, loc='lower right', 
+                                  title='Energy Prices', title_fontsize=18, 
                                   framealpha=0.95)
     
     ax.add_artist(load_legend)
@@ -566,12 +566,12 @@ def create_pricing_mechanism_comparison(all_results, output_dir):
     
     # Set enhanced styling
     plt.rcParams.update({
-        'font.size': 14,
+        'font.size': 18,
         'axes.titlesize': 18,
-        'axes.labelsize': 16,
-        'xtick.labelsize': 14,
-        'ytick.labelsize': 14,
-        'legend.fontsize': 14
+        'axes.labelsize': 18,
+        'xtick.labelsize': 18,
+        'ytick.labelsize': 18,
+        'legend.fontsize': 18
     })
     
     fig, ax = plt.subplots(figsize=(16, 12))
@@ -631,18 +631,18 @@ def create_pricing_mechanism_comparison(all_results, output_dir):
         
         price_labels.append(f'{scenario_name} Prices')
     
-    ax.set_xlabel('Hour', fontsize=16, fontweight='bold')
-    ax.set_ylabel('Load (kW)', fontsize=16, fontweight='bold')
+    ax.set_xlabel('Hour', fontsize=18, fontweight='bold')
+    ax.set_ylabel('Load (kW)', fontsize=18, fontweight='bold')
     ax.set_title('Time-Varying Pricing Impact on Consumer Flexibility', fontsize=18, fontweight='bold', pad=25)
     ax.set_xlim(0.5, 24.5)
     ax.set_ylim(-0.1, 3.2)
     ax.grid(True, alpha=0.3, linewidth=1)
-    ax.tick_params(axis='both', labelsize=14)
+    ax.tick_params(axis='both', labelsize=18)
     
     # Configure price axis with extended range for peak prices
-    ax_price.set_ylabel('Energy Price (DKK/kWh)', fontsize=14, color='dimgray', fontweight='bold')
-    ax_price.tick_params(axis='y', labelcolor='dimgray', labelsize=12)
-    
+    ax_price.set_ylabel('Energy Price (DKK/kWh)', fontsize=16, color='dimgray', fontweight='bold')
+    ax_price.tick_params(axis='y', labelcolor='dimgray', labelsize=18)
+
     # Dynamic scaling for higher peak prices
     all_prices = []
     for scenario_key in scenarios_to_plot:
@@ -657,12 +657,12 @@ def create_pricing_mechanism_comparison(all_results, output_dir):
     ax.axvspan(7, 19, alpha=0.15, color='red', zorder=0, label='Peak Hours')
     
     # Create legends with enhanced styling
-    load_legend = ax.legend(fontsize=14, loc='upper left',
-                           title='Load Schedules', title_fontsize=16, 
+    load_legend = ax.legend(fontsize=16, loc='upper left',
+                           title='Load Schedules', title_fontsize=18, 
                            framealpha=0.95)
-    
-    price_legend = ax_price.legend(price_labels, fontsize=12, loc='lower right', 
-                                  title='Energy Prices', title_fontsize=14, 
+
+    price_legend = ax_price.legend(price_labels, fontsize=16, loc='lower right', 
+                                  title='Energy Prices', title_fontsize=18, 
                                   framealpha=0.95)
     
     ax.add_artist(load_legend)
