@@ -366,7 +366,7 @@ def print_comprehensive_summary_table_q1a(all_results):
     print("=" * 100)
 
 
-def create_separate_q1v_plots(all_results):
+def create_separate_q1v_plots(all_results, output_dir):
     """Create separate individual plots for Q1 Part V analysis"""
     
     # Set professional style matching Q1b_v and Q1c_v
@@ -400,7 +400,7 @@ def create_separate_q1v_plots(all_results):
     colors = ['navy', 'crimson', 'darkorange', 'purple', 'darkgreen'][:len(scenarios)]
     bars1 = ax1.bar(scenario_names, costs, color=colors, alpha=0.8, edgecolor='black', linewidth=2)
     ax1.set_ylabel('Total Daily Cost (DKK)', fontsize=16, fontweight='bold')
-    #ax1.set_title('Total Daily Cost by Scenario', fontsize=18, fontweight='bold', pad=25)
+    ax1.set_title('Total Daily Cost by Scenario', fontsize=18, fontweight='bold', pad=25)
     ax1.tick_params(axis='x', rotation=45, labelsize=14)
     ax1.tick_params(axis='y', labelsize=14)
     ax1.grid(True, alpha=0.3, linewidth=1)
@@ -411,9 +411,9 @@ def create_separate_q1v_plots(all_results):
                 f'{cost:.2f}', ha='center', va='bottom', fontweight='bold', fontsize=13)
     
     plt.tight_layout()
-    plt.savefig('Q1av_Total_Daily_Cost.png', dpi=300, bbox_inches='tight')
+    plt.savefig(output_dir / 'Q1av_Total_Daily_Cost.png', dpi=300, bbox_inches='tight')
     plt.show()
-    print("Total daily cost plot saved as 'Q1v_Total_Daily_Cost.png'")
+    print(f"Total daily cost plot saved to: {output_dir / 'Q1av_Total_Daily_Cost.png'}")
     
     # Plot 2: Import vs Export by Scenario
     fig2, ax2 = plt.subplots(figsize=(14, 10))
@@ -423,7 +423,7 @@ def create_separate_q1v_plots(all_results):
     bars_import = ax2.bar(x_pos - width/2, imports, width, label='Import', color='crimson', alpha=0.8, edgecolor='black', linewidth=2)
     bars_export = ax2.bar(x_pos + width/2, exports, width, label='Export', color='forestgreen', alpha=0.8, edgecolor='black', linewidth=2)
     ax2.set_ylabel('Energy (kWh)', fontsize=16, fontweight='bold')
-    #ax2.set_title('Import vs Export by Scenario', fontsize=18, fontweight='bold', pad=25)
+    ax2.set_title('Import vs Export by Scenario', fontsize=18, fontweight='bold', pad=25)
     ax2.set_xticks(x_pos)
     ax2.set_xticklabels(scenario_names, rotation=45, fontsize=14)
     ax2.tick_params(axis='y', labelsize=14)
@@ -440,16 +440,16 @@ def create_separate_q1v_plots(all_results):
                     f'{val:.1f}', ha='center', va='bottom', fontweight='bold', fontsize=12)
     
     plt.tight_layout()
-    plt.savefig('Q1av_Import_Export.png', dpi=300, bbox_inches='tight')
+    plt.savefig(output_dir / 'Q1av_Import_Export.png', dpi=300, bbox_inches='tight')
     plt.show()
-    print("Import vs Export plot saved as 'Q1v_Import_Export.png'")
+    print(f"Import vs Export plot saved to: {output_dir / 'Q1av_Import_Export.png'}")
     
     # Plot 3: Cost Impact vs Base Case
     fig3, ax3 = plt.subplots(figsize=(14, 10))
     colors_impact = ['gray' if abs(diff) < 0.1 else 'forestgreen' if diff < 0 else 'crimson' for diff in cost_diffs]
     bars3 = ax3.bar(scenario_names, cost_diffs, color=colors_impact, alpha=0.8, edgecolor='black', linewidth=2)
     ax3.set_ylabel('Cost Difference from Base (DKK)', fontsize=16, fontweight='bold')
-    #ax3.set_title('Cost Impact vs Base Case', fontsize=18, fontweight='bold', pad=25)
+    ax3.set_title('Cost Impact vs Base Case', fontsize=18, fontweight='bold', pad=25)
     ax3.tick_params(axis='x', rotation=45, labelsize=14)
     ax3.tick_params(axis='y', labelsize=14)
     ax3.axhline(y=0, color='black', linestyle='-', alpha=0.8, linewidth=3)
@@ -463,11 +463,11 @@ def create_separate_q1v_plots(all_results):
                 fontweight='bold', fontsize=13)
     
     plt.tight_layout()
-    plt.savefig('Q1av_Cost_Impact.png', dpi=300, bbox_inches='tight')
+    plt.savefig(output_dir / 'Q1av_Cost_Impact.png', dpi=300, bbox_inches='tight')
     plt.show()
-    print("Cost impact plot saved as 'Q1v_Cost_Impact.png'")
+    print(f"Cost impact plot saved to: {output_dir / 'Q1av_Cost_Impact.png'}")
 
-def create_tariff_focused_comparison(all_results):
+def create_tariff_focused_comparison(all_results, output_dir):
     """Create comparison focused on import/export tariff changes vs base case"""
     
     # Set enhanced styling
@@ -533,7 +533,7 @@ def create_tariff_focused_comparison(all_results):
     
     ax.set_xlabel('Hour', fontsize=16, fontweight='bold')
     ax.set_ylabel('Load (kW)', fontsize=16, fontweight='bold')
-    #ax.set_title('Import/Export Tariff Impact on Consumer Flexibility', fontsize=18, fontweight='bold', pad=25)
+    ax.set_title('Import/Export Tariff Impact on Consumer Flexibility', fontsize=18, fontweight='bold', pad=25)
     ax.set_xlim(0.5, 24.5)
     ax.set_ylim(-0.1, 3.2)
     ax.grid(True, alpha=0.3, linewidth=1)
@@ -556,12 +556,12 @@ def create_tariff_focused_comparison(all_results):
     ax.add_artist(load_legend)
     
     plt.tight_layout()
-    plt.savefig('Q1av_Tariff_Impact_Comparison.png', dpi=300, bbox_inches='tight')
+    plt.savefig(output_dir / 'Q1av_Tariff_Impact_Comparison.png', dpi=300, bbox_inches='tight')
     plt.show()
-    print("Tariff impact comparison saved as 'Q1v_Tariff_Impact_Comparison.png'")
+    print(f"Tariff impact comparison saved to: {output_dir / 'Q1av_Tariff_Impact_Comparison.png'}")
 
 
-def create_pricing_mechanism_comparison(all_results):
+def create_pricing_mechanism_comparison(all_results, output_dir):
     """Create comparison focused on time-varying pricing mechanisms"""
     
     # Set enhanced styling
@@ -633,7 +633,7 @@ def create_pricing_mechanism_comparison(all_results):
     
     ax.set_xlabel('Hour', fontsize=16, fontweight='bold')
     ax.set_ylabel('Load (kW)', fontsize=16, fontweight='bold')
-    #ax.set_title('Time-Varying Pricing Impact on Consumer Flexibility', fontsize=18, fontweight='bold', pad=25)
+    ax.set_title('Time-Varying Pricing Impact on Consumer Flexibility', fontsize=18, fontweight='bold', pad=25)
     ax.set_xlim(0.5, 24.5)
     ax.set_ylim(-0.1, 3.2)
     ax.grid(True, alpha=0.3, linewidth=1)
@@ -668,12 +668,16 @@ def create_pricing_mechanism_comparison(all_results):
     ax.add_artist(load_legend)
     
     plt.tight_layout()
-    plt.savefig('Q1av_Pricing_Mechanism_Comparison.png', dpi=300, bbox_inches='tight')
+    plt.savefig(output_dir / 'Q1av_Pricing_Mechanism_Comparison.png', dpi=300, bbox_inches='tight')
     plt.show()
-    print("Pricing mechanism comparison saved as 'Q1v_Pricing_Mechanism_Comparison.png'")
+    print(f"Pricing mechanism comparison saved to: {output_dir / 'Q1av_Pricing_Mechanism_Comparison.png'}")
 
 # Replace the create_improved_hourly_load_comparison function call in your main section:
 if __name__ == "__main__":
+    # Create output directory
+    output_dir = Path('results/question_1a')
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
     print("Q1(v) SCENARIO ANALYSIS")
     print("=" * 80)
     print("QUESTION 1a PART V - SCENARIO ANALYSIS: TARIFF IMPACT & PRICING MECHANISMS")
@@ -686,19 +690,12 @@ if __name__ == "__main__":
         
         # Create all plots
         print("\nGenerating plots...")
-        create_separate_q1v_plots(results)
-        create_tariff_focused_comparison(results)
-        create_pricing_mechanism_comparison(results)
+        create_separate_q1v_plots(results, output_dir)
+        create_tariff_focused_comparison(results, output_dir)
+        create_pricing_mechanism_comparison(results, output_dir)
         print("Plots completed.")
         
         print("\n" + "=" * 80)
         print("ANALYSIS COMPLETE")
-        print("\nVISUALIZATIONS GENERATED:")
-        print("1. Total daily cost by scenario")
-        print("2. Import vs export comparison")
-        print("3. Cost impact vs base case")
-        print("4. Tariff impact comparison")  
-        print("5. Pricing mechanism comparison")
-        
     else:
         print("\nQ1 Part V analysis failed!")

@@ -72,6 +72,10 @@ def solve_q1iv_professional():
         dict: Results dictionary or None if failed
     """
     
+    # Create output directory
+    output_dir = Path('results/question_1a')
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
     print("Q1(iv) OPTIMIZATION ANALYSIS")
     print("=" * 80)
     print("QUESTION 1a PART IV - CONSUMER ENERGY FLEXIBILITY OPTIMIZATION")
@@ -98,7 +102,7 @@ def solve_q1iv_professional():
             
         # Generate professional output
         print_detailed_results(results, optimization_data)
-        create_enhanced_plots(results, optimization_data)
+        create_enhanced_plots(results, optimization_data, output_dir)
         
         return results
         
@@ -156,7 +160,7 @@ def print_detailed_results(results, optimization_data):
     print(f"{metrics['pv_utilization']:.1f}% PV utilization and {metrics['grid_dependency']:.1f}% grid dependency.")
 
 
-def create_enhanced_plots(results, optimization_data):
+def create_enhanced_plots(results, optimization_data, output_dir):
     """Create enhanced plots with professional styling matching other scripts"""
     
     # Set professional style matching Q1b_v and Q1c_v
@@ -184,7 +188,7 @@ def create_enhanced_plots(results, optimization_data):
     ax1.step(hours, results['pv_schedule'], 'orange', linewidth=4, label='PV Used', where='mid')
     ax1.set_xlabel('Hour', fontsize=16, fontweight='bold')
     ax1.set_ylabel('Power (kW)', color='black', fontsize=16, fontweight='bold')
-    #ax1.set_title('Load Schedule and PV Utilization', fontsize=18, fontweight='bold', pad=25)
+    ax1.set_title('Load Schedule and PV Utilization', fontsize=18, fontweight='bold', pad=25)
     ax1.set_xlim(0.5, 24.5)
     ax1.grid(True, alpha=0.3, linewidth=1)
     ax1.tick_params(axis='both', labelsize=14)
@@ -201,9 +205,9 @@ def create_enhanced_plots(results, optimization_data):
     ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left', fontsize=14, framealpha=0.95)
     
     plt.tight_layout()
-    plt.savefig('Q1iv_Load_PV.png', dpi=300, bbox_inches='tight')
+    plt.savefig(output_dir / 'Q1iv_Load_PV.png', dpi=300, bbox_inches='tight')
     plt.show()
-    print("Load and PV plot saved as 'Q1iv_Load_PV.png'")
+    print(f"Load and PV plot saved to: {output_dir / 'Q1iv_Load_PV.png'}")
     
     # Plot 2: Grid Import/Export
     fig2, ax2 = plt.subplots(figsize=(14, 10))
@@ -213,7 +217,7 @@ def create_enhanced_plots(results, optimization_data):
     ax2.axhline(y=0, color='black', linestyle='-', alpha=0.8, linewidth=2)
     ax2.set_xlabel('Hour', fontsize=16, fontweight='bold')
     ax2.set_ylabel('Power (kW)', color='black', fontsize=16, fontweight='bold')
-    #ax2.set_title('Grid Import/Export', fontsize=18, fontweight='bold', pad=25)
+    ax2.set_title('Grid Import/Export', fontsize=18, fontweight='bold', pad=25)
     ax2.set_xlim(0.5, 24.5)
     ax2.grid(True, alpha=0.3, linewidth=1)
     ax2.tick_params(axis='both', labelsize=14)
@@ -230,9 +234,16 @@ def create_enhanced_plots(results, optimization_data):
     ax2.legend(lines3 + lines4, labels3 + labels4, loc='upper left', fontsize=14, framealpha=0.95)
     
     plt.tight_layout()
-    plt.savefig('Q1iv_Import_Export.png', dpi=300, bbox_inches='tight')
+    
+    # Save to results/question_1a/
+    from pathlib import Path
+    project_root = Path(__file__).parent.parent.parent
+    output_dir = project_root / "results" / "question_1a"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    plt.savefig(output_dir / 'Q1iv_Import_Export.png', dpi=300, bbox_inches='tight')
     plt.show()
-    print("Import/Export plot saved as 'Q1iv_Import_Export.png'")
+    print(f"Import/Export plot saved to: {output_dir / 'Q1iv_Import_Export.png'}")
 
 
 if __name__ == "__main__":
@@ -240,9 +251,5 @@ if __name__ == "__main__":
     if results:
         print("\n" + "=" * 80)
         print("ANALYSIS COMPLETE")
-        print("\nVISUALIZATIONS GENERATED:")
-        print("1. Load schedule and PV utilization")
-        print("2. Grid import/export patterns")
-        print("\nQ1 Part IV completed successfully.")
     else:
         print("\nQ1 Part IV analysis failed.")

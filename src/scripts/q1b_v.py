@@ -323,22 +323,22 @@ def solve_w_variation_scenarios():
     
     return scenario_results
 
-def create_w_variation_plots(scenario_results, system_params):
+def create_w_variation_plots(scenario_results, system_params, output_dir):
     """Create the 4 plots for w-variation analysis"""
     
     # Plot 1: Load profiles comparison with energy prices
-    create_load_profiles_comparison(scenario_results, system_params)
+    create_load_profiles_comparison(scenario_results, system_params, output_dir)
     
     # Plot 2: Cost breakdown
-    create_cost_breakdown_analysis(scenario_results, system_params)
+    create_cost_breakdown_analysis(scenario_results, system_params, output_dir)
     
     # Plot 3: Daily energy balance summary
-    create_energy_balance_summary(scenario_results, system_params)
+    create_energy_balance_summary(scenario_results, system_params, output_dir)
     
     # Plot 4: Consumer under-consumption patterns
-    create_under_consumption_patterns(scenario_results, system_params)
+    create_under_consumption_patterns(scenario_results, system_params, output_dir)
 
-def create_load_profiles_comparison(scenario_results, system_params):
+def create_load_profiles_comparison(scenario_results, system_params, output_dir):
     """Plot 1: Load profiles for all 4 scenarios with energy prices"""
     fig, ax1 = plt.subplots(figsize=(16, 10))
     
@@ -382,10 +382,10 @@ def create_load_profiles_comparison(scenario_results, system_params):
     ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left', framealpha=0.9, fontsize=16)
     
     plt.tight_layout()
-    plt.savefig('Q1b_v_Load_Profiles_Comparison.png', dpi=300, bbox_inches='tight')
+    plt.savefig(output_dir / 'Q1b_v_Load_Profiles_Comparison.png', dpi=300, bbox_inches='tight')
     plt.show()
 
-def create_cost_breakdown_analysis(scenario_results, system_params):
+def create_cost_breakdown_analysis(scenario_results, system_params, output_dir):
     """Plot 2: Cost breakdown with energy cost, revenue, and discomfort"""
     fig, ax = plt.subplots(figsize=(14, 8))
     
@@ -443,10 +443,10 @@ def create_cost_breakdown_analysis(scenario_results, system_params):
     ax.axhline(y=0, color='black', linestyle='-', alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig('Q1b_v_Cost_Breakdown_Analysis.png', dpi=300, bbox_inches='tight')
+    plt.savefig(output_dir / 'Q1b_v_Cost_Breakdown_Analysis.png', dpi=300, bbox_inches='tight')
     plt.show()
 
-def create_energy_balance_summary(scenario_results, system_params):
+def create_energy_balance_summary(scenario_results, system_params, output_dir):
     """Plot 3: Daily energy balance with import, export, consumption, and PV used"""
     fig, ax = plt.subplots(figsize=(14, 8))
     
@@ -483,10 +483,10 @@ def create_energy_balance_summary(scenario_results, system_params):
     ax.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig('Q1b_v_Energy_Balance_Summary.png', dpi=300, bbox_inches='tight')
+    plt.savefig(output_dir / 'Q1b_v_Energy_Balance_Summary.png', dpi=300, bbox_inches='tight')
     plt.show()
 
-def create_under_consumption_patterns(scenario_results, system_params):
+def create_under_consumption_patterns(scenario_results, system_params, output_dir):
     """Plot 4: Consumer under-consumption patterns - single plot with different colors"""
     fig, ax = plt.subplots(figsize=(16, 8))
     
@@ -512,7 +512,7 @@ def create_under_consumption_patterns(scenario_results, system_params):
     ax.legend(fontsize=16)
     
     plt.tight_layout()
-    plt.savefig('Q1b_v_Under_Consumption_Patterns.png', dpi=300, bbox_inches='tight')
+    plt.savefig(output_dir / 'Q1b_v_Under_Consumption_Patterns.png', dpi=300, bbox_inches='tight')
     plt.show()
 
 def solve_consumer_load_scenarios():
@@ -587,17 +587,17 @@ def solve_consumer_load_scenarios():
     
     return scenario_results
 
-def create_consumer_load_plots(consumer_results, system_params):
+def create_consumer_load_plots(consumer_results, system_params, output_dir):
     """Create 4 individual consumer plots + 1 cost breakdown"""
     
     # Create 4 individual consumer plots
     for i, consumer in enumerate(consumer_results):
-        create_individual_consumer_plot(consumer, i+1, system_params)
+        create_individual_consumer_plot(consumer, i+1, system_params, output_dir)
     
     # Create combined cost breakdown
-    create_consumer_cost_breakdown(consumer_results, system_params)
+    create_consumer_cost_breakdown(consumer_results, system_params, output_dir)
 
-def create_individual_consumer_plot(consumer, plot_num, system_params):
+def create_individual_consumer_plot(consumer, plot_num, system_params, output_dir):
     """Create individual plot for one consumer type"""
     fig, ax1 = plt.subplots(figsize=(14, 8))
     
@@ -635,11 +635,11 @@ def create_individual_consumer_plot(consumer, plot_num, system_params):
     ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left', framealpha=0.9, fontsize=16)
     
     plt.tight_layout()
-    plt.savefig(f'Q1b_v_Consumer_{plot_num}_{consumer["name"].replace(" ", "_")}.png', 
+    plt.savefig(output_dir / f'Q1b_v_Consumer_{plot_num}_{consumer["name"].replace(" ", "_")}.png', 
                dpi=300, bbox_inches='tight')
     plt.show()
 
-def create_consumer_cost_breakdown(consumer_results, system_params):
+def create_consumer_cost_breakdown(consumer_results, system_params, output_dir):
     """Create cost breakdown for all consumer types"""
     fig, ax = plt.subplots(figsize=(14, 8))
     
@@ -687,11 +687,15 @@ def create_consumer_cost_breakdown(consumer_results, system_params):
     ax.axhline(y=0, color='black', linestyle='-', alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig('Q1b_v_Consumer_Cost_Breakdown.png', dpi=300, bbox_inches='tight')
+    plt.savefig(output_dir / 'Q1b_v_Consumer_Cost_Breakdown.png', dpi=300, bbox_inches='tight')
     plt.show()
 
 def main():
     """Main execution function"""
+    # Create output directory
+    output_dir = Path('results/question_1b')
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
     print("Q1(v) SCENARIO ANALYSIS")
     print("=" * 80)
     print("QUESTION 1b PART V - SCENARIO ANALYSIS: FLEXIBILITY & COST STRUCTURE")
@@ -705,13 +709,13 @@ def main():
         w_results = solve_w_variation_scenarios()
         
         if w_results:
-            create_w_variation_plots(w_results, system_params)
+            create_w_variation_plots(w_results, system_params, output_dir)
         
         # PART 2: Consumer Load Profile Analysis (4 consumers, 5 plots)
         consumer_results = solve_consumer_load_scenarios()
         
         if consumer_results:
-            create_consumer_load_plots(consumer_results, system_params)
+            create_consumer_load_plots(consumer_results, system_params, output_dir)
         
         # Generate visualizations
         print("\nGenerating plots...")
@@ -724,13 +728,6 @@ def main():
         
         print_solution_summary(w_results, consumer_results, system_params)
         
-        print("\nVISUALIZATIONS GENERATED:")
-        print("1. Load profiles comparison with energy prices")
-        print("2. Cost breakdown analysis")
-        print("3. Energy balance summary")
-        print("4. Under-consumption patterns")
-        print("5. Individual consumer profiles (4 plots)")
-        print("6. Consumer cost breakdown")
         
     except Exception as e:
         print(f"ERROR in Q1b scenario analysis: {e}")

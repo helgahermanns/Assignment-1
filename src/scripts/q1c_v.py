@@ -77,7 +77,7 @@ def calculate_storage_arbitrage_value(scenario_data, scenario_config):
     return arbitrage_value
 
 
-def solve_q1c_v_scenarios():
+def solve_q1c_v_scenarios(output_dir):
     """
     Solve Q1c part v with 5 different scenarios analyzing flexibility and cost structure.
     
@@ -202,7 +202,7 @@ def solve_q1c_v_scenarios():
             print_comprehensive_summary_table(detailed_metrics, scenarios)
             
             # Generate visualizations
-            create_scenario_visualizations(all_results, all_data, scenarios)
+            create_scenario_visualizations(all_results, all_data, scenarios, output_dir)
             
             return {
                 'results': all_results,
@@ -442,30 +442,30 @@ def print_variable_tables(results, data, scenario_key):
     print(f"\nVariable definitions printed for {scenario_key}")
 
 
-def create_scenario_visualizations(all_results, all_data, scenarios):
+def create_scenario_visualizations(all_results, all_data, scenarios, output_dir):
     """Create exactly the 5 requested visualizations."""
     
     print(f"\nGenerating plots...")
     
     # Plot 1: Cost breakdown per scenario (stacked bars) - matching the image
-    create_plot1_cost_breakdown(all_results, all_data, scenarios)
+    create_plot1_cost_breakdown(all_results, all_data, scenarios, output_dir)
     
     # Plot 2: Battery SoC profiles (24 h) 
-    create_plot2_battery_soc_profiles(all_results, scenarios)
+    create_plot2_battery_soc_profiles(all_results, scenarios, output_dir)
     
     # Plot 3: Shadow price λₜ (dual variable)
-    create_plot3_shadow_price_lambda(all_results, all_data, scenarios)
+    create_plot3_shadow_price_lambda(all_results, all_data, scenarios, output_dir)
     
     # Plot 4: Hourly energy flows (BASE vs FLEX)
-    create_plot4_hourly_energy_flows_base_flex(all_results, all_data, scenarios)
+    create_plot4_hourly_energy_flows_base_flex(all_results, all_data, scenarios, output_dir)
     
     # Plot 5: Hourly energy flows (HIGH-IMPORT vs LOW-EXPORT)
-    create_plot5_hourly_energy_flows_tariffs(all_results, all_data, scenarios)
+    create_plot5_hourly_energy_flows_tariffs(all_results, all_data, scenarios, output_dir)
     
     print("Plots completed.")
 
 
-def create_plot1_cost_breakdown(all_results, all_data, scenarios):
+def create_plot1_cost_breakdown(all_results, all_data, scenarios, output_dir):
     """Plot 1: Daily Cost Breakdown Across Scenarios - matching the image style"""
     
     fig, ax = plt.subplots(figsize=(16, 10))
@@ -513,7 +513,7 @@ def create_plot1_cost_breakdown(all_results, all_data, scenarios):
     
     #ax.set_xlabel('Scenario', fontsize=18, fontweight='bold')
     ax.set_ylabel('Cost/Revenue (DKK)', fontsize=18, fontweight='bold')
-    #ax.set_title('DETAILED COST COMPONENT COMPARISON', fontsize=20, fontweight='bold', pad=20)
+    ax.set_title('DETAILED COST COMPONENT COMPARISON', fontsize=20, fontweight='bold', pad=20)
     ax.set_xticks(x)
     ax.set_xticklabels(scenario_names, fontsize=14, fontweight='bold', rotation=45)
     ax.tick_params(axis='y', labelsize=14)
@@ -524,11 +524,11 @@ def create_plot1_cost_breakdown(all_results, all_data, scenarios):
     ax.set_ylim(-15, 25)
     
     plt.tight_layout()
-    plt.savefig('Q1c_v_Plot1_Cost_Breakdown.png', dpi=350, bbox_inches='tight')
+    plt.savefig(output_dir / 'Q1c_v_Plot1_Cost_Breakdown.png', dpi=350, bbox_inches='tight')
     plt.show()
 
 
-def create_plot2_battery_soc_profiles(all_results, scenarios):
+def create_plot2_battery_soc_profiles(all_results, scenarios, output_dir):
     """Plot 2: Battery State of Charge Under Different Flexibility Levels (24 h)"""
     
     fig, ax = plt.subplots(figsize=(20, 12))
@@ -569,7 +569,7 @@ def create_plot2_battery_soc_profiles(all_results, scenarios):
     
     ax.set_xlabel('Hour of Day', fontsize=22, fontweight='bold')
     ax.set_ylabel('SoC (kWh)', fontsize=22, fontweight='bold')
-    #ax.set_title('Battery State of Charge Under Different Flexibility Levels', fontsize=26, fontweight='bold', pad=30)
+    ax.set_title('Battery State of Charge Under Different Flexibility Levels', fontsize=26, fontweight='bold', pad=30)
     ax.set_xlim(0.5, 24.5)
     ax.set_xticks(range(1, 25, 2))
     ax.set_ylim(0, 6.5)
@@ -578,11 +578,11 @@ def create_plot2_battery_soc_profiles(all_results, scenarios):
     ax.legend(fontsize=18, loc='upper left', framealpha=0.95, edgecolor='black')
     
     plt.tight_layout()
-    plt.savefig('Q1c_v_Plot2_Battery_SoC_Profiles.png', dpi=350, bbox_inches='tight')
+    plt.savefig(output_dir / 'Q1c_v_Plot2_Battery_SoC_Profiles.png', dpi=350, bbox_inches='tight')
     plt.show()
 
 
-def create_plot3_shadow_price_lambda(all_results, all_data, scenarios):
+def create_plot3_shadow_price_lambda(all_results, all_data, scenarios, output_dir):
     """Plot 3: Shadow Price λₜ (dual variable) - Single plot with all scenarios"""
     
     fig, ax = plt.subplots(figsize=(20, 12))
@@ -665,7 +665,7 @@ def create_plot3_shadow_price_lambda(all_results, all_data, scenarios):
     
     ax.set_xlabel('Hour of Day', fontsize=22, fontweight='bold')
     ax.set_ylabel('Shadow Price λₜ (DKK/kWh)', fontsize=22, fontweight='bold')
-    #ax.set_title('Marginal Value of Energy (λₜ) – Effect of Flexibility & Tariff Structure', fontsize=24, fontweight='bold', pad=30)
+    ax.set_title('Marginal Value of Energy (λₜ) – Effect of Flexibility & Tariff Structure', fontsize=24, fontweight='bold', pad=30)
     ax.set_xlim(0.5, 24.5)
     ax.set_xticks(range(1, 25, 2))
     ax.tick_params(axis='both', labelsize=18)
@@ -673,11 +673,11 @@ def create_plot3_shadow_price_lambda(all_results, all_data, scenarios):
     ax.legend(fontsize=18, loc='upper left', framealpha=0.95, edgecolor='black', ncol=2)
     
     plt.tight_layout()
-    plt.savefig('Q1c_v_Plot3_Shadow_Price_Lambda.png', dpi=350, bbox_inches='tight')
+    plt.savefig(output_dir / 'Q1c_v_Plot3_Shadow_Price_Lambda.png', dpi=350, bbox_inches='tight')
     plt.show()
 
 
-def create_plot4_hourly_energy_flows_base_flex(all_results, all_data, scenarios):
+def create_plot4_hourly_energy_flows_base_flex(all_results, all_data, scenarios, output_dir):
     """Plot 4: Hourly Energy Flows – Base vs Flexible Consumer"""
     
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(20, 18))
@@ -738,11 +738,11 @@ def create_plot4_hourly_energy_flows_base_flex(all_results, all_data, scenarios)
     
     plt.tight_layout(pad=3.0)
     plt.subplots_adjust(hspace=0.3)
-    plt.savefig('Q1c_v_Plot4_Hourly_Energy_Flows_Base_Flex.png', dpi=350, bbox_inches='tight')
+    plt.savefig(output_dir / 'Q1c_v_Plot4_Hourly_Energy_Flows_Base_Flex.png', dpi=350, bbox_inches='tight')
     plt.show()
 
 
-def create_plot5_hourly_energy_flows_tariffs(all_results, all_data, scenarios):
+def create_plot5_hourly_energy_flows_tariffs(all_results, all_data, scenarios, output_dir):
     """Plot 5: Hourly Energy Flows – High Import vs Low Export Tariffs"""
     
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(20, 18))
@@ -803,7 +803,7 @@ def create_plot5_hourly_energy_flows_tariffs(all_results, all_data, scenarios):
     
     plt.tight_layout(pad=3.0)
     plt.subplots_adjust(hspace=0.3)
-    plt.savefig('Q1c_v_Plot5_Hourly_Energy_Flows_Tariffs.png', dpi=350, bbox_inches='tight')
+    plt.savefig(output_dir / 'Q1c_v_Plot5_Hourly_Energy_Flows_Tariffs.png', dpi=350, bbox_inches='tight')
     plt.show()
 
 
@@ -996,6 +996,10 @@ def print_professional_results(all_results, all_data, scenarios, kpi_df):
 def main():
     """Main execution function for Q1c scenario analysis."""
     
+    # Create output directory
+    output_dir = Path('results/question_1c')
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
     print("Q1(v) SCENARIO ANALYSIS")
     print("=" * 80)
     print("QUESTION 1c PART V - SCENARIO ANALYSIS: FLEXIBILITY & COST STRUCTURE")
@@ -1003,7 +1007,7 @@ def main():
     
     try:
         # Solve all scenarios
-        analysis_results = solve_q1c_v_scenarios()
+        analysis_results = solve_q1c_v_scenarios(output_dir)
         
         if analysis_results:
             # Print professional results in requested format
